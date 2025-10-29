@@ -149,28 +149,61 @@ export default function Dashboard() {
   };
 
   const deleteFileFromStorage = async (fileUrl) => {
-    if (!fileUrl) return;
+    if (!fileUrl) {
+      console.log("No file URL provided for deletion");
+      return;
+    }
     
     try {
-      // Extract the file path from the URL
-      const url = new URL(fileUrl);
-      const pathParts = url.pathname.split('/');
-      const bucket = pathParts[1];
-      const filePath = pathParts.slice(2).join('/');
+      console.log("🔄 Attempting to delete file:", fileUrl);
       
-      console.log(`Deleting file from ${bucket}:`, filePath);
+      let bucket, filePath;
       
+      // Method 1: Parse standard Supabase URL format
+      if (fileUrl.includes('supabase.co/storage/v1/object/public/')) {
+        const url = new URL(fileUrl);
+        const pathParts = url.pathname.split('/');
+        const publicIndex = pathParts.indexOf('public');
+        
+        if (publicIndex !== -1 && pathParts.length > publicIndex + 2) {
+          bucket = pathParts[publicIndex + 1];
+          filePath = pathParts.slice(publicIndex + 2).join('/');
+        }
+      }
+      // Method 2: Handle different URL formats
+      else if (fileUrl.includes('/storage/v1/object/public/')) {
+        const parts = fileUrl.split('/storage/v1/object/public/');
+        if (parts.length === 2) {
+          const bucketAndPath = parts[1].split('/');
+          bucket = bucketAndPath[0];
+          filePath = bucketAndPath.slice(1).join('/');
+        }
+      }
+      
+      console.log(`📁 Extracted - Bucket: ${bucket}, FilePath: ${filePath}`);
+      
+      if (!bucket || !filePath) {
+        console.error("❌ Could not extract bucket or file path from URL");
+        console.log("URL format might be different than expected");
+        return;
+      }
+      
+      // Delete the file
       const { error } = await supabase.storage
         .from(bucket)
         .remove([filePath]);
       
       if (error) {
-        console.error("Error deleting file:", error);
+        console.error("❌ Error deleting file from storage:", error);
+        if (error.message.includes('not found')) {
+          console.log("File might have already been deleted or doesn't exist");
+        }
       } else {
-        console.log("File deleted successfully");
+        console.log("✅ File deleted successfully from storage");
       }
     } catch (error) {
-      console.error("Error parsing file URL for deletion:", error);
+      console.error("❌ Error in deleteFileFromStorage:", error);
+      console.log("Problematic file URL:", fileUrl);
     }
   };
 
@@ -229,13 +262,14 @@ export default function Dashboard() {
       let videoUrl = existingFiles.video_file;
       let musicUrl = existingFiles.music_file;
 
-      console.log("Starting file uploads...");
+      console.log("🔄 Starting file uploads...");
 
       // Upload profile image if new file selected
       if (formData.profile_image) {
-        console.log("Uploading profile image...");
+        console.log("📸 Uploading profile image...");
         // Delete old profile image if exists
         if (existingFiles.profile_image_file) {
+          console.log("🗑️ Deleting old profile image...");
           await deleteFileFromStorage(existingFiles.profile_image_file);
         }
         profileImageUrl = await uploadFile(
@@ -243,26 +277,27 @@ export default function Dashboard() {
           'memorial-images', 
           `${user.id}/profile`
         );
-        console.log("Profile image URL:", profileImageUrl);
+        console.log("✅ Profile image URL:", profileImageUrl);
       }
 
       // Upload new gallery images
       if (formData.gallery_images.length > 0) {
-        console.log("Uploading gallery images...");
+        console.log("🖼️ Uploading gallery images...");
         const uploadPromises = formData.gallery_images.map((file, index) => {
-          console.log(`Uploading gallery image ${index + 1}:`, file.name);
+          console.log(`📤 Uploading gallery image ${index + 1}:`, file.name);
           return uploadFile(file, 'memorial-images', `${user.id}/gallery`);
         });
         const newGalleryUrls = await Promise.all(uploadPromises);
         galleryUrls = [...galleryUrls, ...newGalleryUrls];
-        console.log("All Gallery URLs:", galleryUrls);
+        console.log("✅ All Gallery URLs:", galleryUrls);
       }
 
       // Upload video if new file selected
       if (formData.video_file) {
-        console.log("Uploading video...");
+        console.log("🎥 Uploading video...");
         // Delete old video if exists
         if (existingFiles.video_file) {
+          console.log("🗑️ Deleting old video...");
           await deleteFileFromStorage(existingFiles.video_file);
         }
         videoUrl = await uploadFile(
@@ -270,14 +305,15 @@ export default function Dashboard() {
           'memorial-videos',
           `${user.id}/videos`
         );
-        console.log("Video URL:", videoUrl);
+        console.log("✅ Video URL:", videoUrl);
       }
 
       // Upload music if new file selected
       if (formData.music_file) {
-        console.log("Uploading music...");
+        console.log("🎵 Uploading music...");
         // Delete old music if exists
         if (existingFiles.music_file) {
+          console.log("🗑️ Deleting old music...");
           await deleteFileFromStorage(existingFiles.music_file);
         }
         musicUrl = await uploadFile(
@@ -285,24 +321,23 @@ export default function Dashboard() {
           'memorial-audio',
           `${user.id}/audio`
         );
-        console.log("Music URL:", musicUrl);
+        console.log("✅ Music URL:", musicUrl);
       }
 
-      // Prepare memorial data with CORRECT column names from your database
+      // Prepare memorial data
       const memorialData = {
         name: formData.name,
         birth_date: formData.birth_date,
         death_date: formData.death_date,
         cause_of_death: formData.cause_of_death,
         story: formData.story,
-        // Using the correct column names from your database
         profile_image_file: profileImageUrl,
         gallery_files: galleryUrls,
         video_file: videoUrl,
         music_file: musicUrl,
       };
 
-      console.log("Saving memorial data:", memorialData);
+      console.log("💾 Saving memorial data:", memorialData);
 
       if (editingId) {
         // Update existing memorial
@@ -312,6 +347,7 @@ export default function Dashboard() {
           .eq("id", editingId);
 
         if (error) throw error;
+        console.log("✅ Memorial updated successfully!");
         alert("Memorial updated successfully!");
       } else {
         // Create new memorial
@@ -338,13 +374,14 @@ export default function Dashboard() {
             .eq("id", newMemorial.id);
         }
 
+        console.log("✅ Memorial created successfully!");
         alert("Memorial created successfully!");
       }
 
       await fetchMemorials(user.id);
       resetForm();
     } catch (error) {
-      console.error("Error saving memorial:", error);
+      console.error("❌ Error saving memorial:", error);
       alert("Error saving memorial. Please try again.");
     } finally {
       setSaving(false);
@@ -380,6 +417,32 @@ export default function Dashboard() {
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this memorial?")) return;
 
+    // First get the memorial to delete files from storage
+    const { data: memorial } = await supabase
+      .from("memorials")
+      .select("*")
+      .eq("id", id)
+      .single();
+
+    if (memorial) {
+      // Delete all associated files from storage
+      if (memorial.profile_image_file) {
+        await deleteFileFromStorage(memorial.profile_image_file);
+      }
+      if (memorial.gallery_files) {
+        for (const imageUrl of memorial.gallery_files) {
+          await deleteFileFromStorage(imageUrl);
+        }
+      }
+      if (memorial.video_file) {
+        await deleteFileFromStorage(memorial.video_file);
+      }
+      if (memorial.music_file) {
+        await deleteFileFromStorage(memorial.music_file);
+      }
+    }
+
+    // Then delete the memorial record
     const { error } = await supabase
       .from("memorials")
       .delete()
@@ -413,7 +476,7 @@ export default function Dashboard() {
       ...prev,
       gallery_files: prev.gallery_files.filter((_, i) => i !== index)
     }));
-    // Optionally delete from storage
+    // Delete from storage
     deleteFileFromStorage(imageToRemove);
   };
 
