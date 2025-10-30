@@ -119,6 +119,13 @@ export default function MemorialPage() {
   const downloadQRCode = async () => {
     if (!memorial) return;
 
+    // Get QR code from the component
+    const qrCanvas = qrRef.current?.querySelector('canvas');
+    if (!qrCanvas) {
+      alert('QR code not ready. Please try again.');
+      return;
+    }
+
     const canvas = document.createElement('canvas');
     const ctx = canvas.getContext('2d');
     
@@ -157,20 +164,16 @@ export default function MemorialPage() {
     const deathDate = formatDate(memorial.death_date);
     ctx.fillText(`${birthDate} — ${deathDate}`, canvas.width / 2, 200);
 
-    // Get QR code from the component
-    const qrCanvas = qrRef.current?.querySelector('canvas');
-    if (qrCanvas) {
-      // Draw white background for QR
-      ctx.fillStyle = '#ffffff';
-      const qrSize = 280;
-      const qrX = (canvas.width - qrSize) / 2;
-      const qrY = 250;
-      const padding = 20;
-      ctx.fillRect(qrX - padding, qrY - padding, qrSize + padding * 2, qrSize + padding * 2);
-      
-      // Draw QR code
-      ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
-    }
+    // Draw white background for QR
+    ctx.fillStyle = '#ffffff';
+    const qrSize = 280;
+    const qrX = (canvas.width - qrSize) / 2;
+    const qrY = 250;
+    const padding = 20;
+    ctx.fillRect(qrX - padding, qrY - padding, qrSize + padding * 2, qrSize + padding * 2);
+    
+    // Draw QR code
+    ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
 
     // "Scan to View Memorial" text
     ctx.fillStyle = '#ffffff';
@@ -632,7 +635,7 @@ export default function MemorialPage() {
 
               {/* Share Button, Bird Counter, and Download Button */}
               <div className="flex flex-col items-center gap-3">
-               <button
+                <button
                   onClick={handleShare}
                   className="flex items-center justify-center gap-3 px-6 py-3 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-xl hover:from-neutral-800 hover:to-neutral-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 min-w-[240px]"
                 >
@@ -644,7 +647,7 @@ export default function MemorialPage() {
 
                 <button
                   onClick={handleBirdClick}
-                  className={`relative flex items-center gap-3 px-6 py-3 ${darkMode ? 'bg-neutral-800 border-neutral-600 hover:border-neutral-500' : 'bg-white border-neutral-200 hover:border-neutral-400'} rounded-xl border-2 hover:shadow-xl transition-all transform hover:scale-105 group min-w-[240px] overflow-hidden`}
+                  className={`relative flex items-center justify-center gap-3 px-6 py-3 ${darkMode ? 'bg-neutral-800 border-neutral-600 hover:border-neutral-500' : 'bg-white border-neutral-200 hover:border-neutral-400'} rounded-xl border-2 hover:shadow-xl transition-all transform hover:scale-105 group min-w-[240px] overflow-hidden`}
                 >
                   <span className="text-xl group-hover:scale-110 transition-transform duration-300">🕊️</span>
                   <div className="flex items-center gap-1.5">
