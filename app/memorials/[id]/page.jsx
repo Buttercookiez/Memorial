@@ -119,15 +119,29 @@ export default function MemorialPage() {
   const downloadQRCode = async () => {
     if (!memorial) return;
 
+    // Wait a bit for QR code to render if needed
+    await new Promise(resolve => setTimeout(resolve, 100));
+
     // Get QR code from the component
     const qrCanvas = qrRef.current?.querySelector('canvas');
     if (!qrCanvas) {
-      alert('QR code not ready. Please try again.');
+      alert('QR code not ready. Please wait a moment and try again.');
       return;
     }
 
-    const canvas = document.createElement('canvas');
-    const ctx = canvas.getContext('2d');
+    // Check if canvas has content
+    try {
+      const ctx = qrCanvas.getContext('2d');
+      const imageData = ctx.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
+      const hasContent = imageData.data.some(pixel => pixel !== 0);
+      
+      if (!hasContent) {
+        alert('QR code is still loading. Please try again in a moment.');
+        return;
+      }
+    } catch (error) {
+      console.error('Error checking QR canvas:', error);
+    }
     
     // Set canvas size for card (600x800px for good quality)
     canvas.width = 600;
