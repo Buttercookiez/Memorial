@@ -412,7 +412,7 @@ export default function MemorialPage() {
 
           {/* Tab Navigation - Optimized for Mobile */}
           <div className={`border-b ${darkMode ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'} overflow-x-auto scrollbar-hide`}>
-            <div className="flex min-w-max">
+            <div className="flex min-w-max sm:justify-center">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
