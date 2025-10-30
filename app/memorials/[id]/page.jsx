@@ -411,13 +411,13 @@ export default function MemorialPage() {
           </div>
 
           {/* Tab Navigation - Optimized for Mobile */}
-          <div className={`border-b ${darkMode ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'} overflow-x-auto scrollbar-hide`}>
-            <div className="flex min-w-max sm:justify-center">
+          <div className={`border-b ${darkMode ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
+            <div className="flex justify-center w-full">
               {tabs.map((tab) => (
                 <button
                   key={tab.id}
                   onClick={() => setActiveTab(tab.id)}
-                  className={`flex items-center justify-center gap-1.5 px-4 sm:px-6 py-2.5 sm:py-4 text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
+                  className={`flex flex-col sm:flex-row items-center justify-center gap-1 sm:gap-1.5 px-2 sm:px-6 py-2.5 sm:py-4 text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-1 sm:flex-initial ${
                     activeTab === tab.id
                       ? darkMode 
                         ? "text-white border-b-2 border-white" 
@@ -431,7 +431,7 @@ export default function MemorialPage() {
                     {tab.icon}
                   </span>
                   <span className="hidden sm:inline">{tab.label}</span>
-                  <span className="sm:hidden">{tab.shortLabel}</span>
+                  <span className="sm:hidden text-[10px] leading-tight">{tab.shortLabel}</span>
                 </button>
               ))}
             </div>
