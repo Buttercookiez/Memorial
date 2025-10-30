@@ -18,6 +18,7 @@ export default function MemorialPage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const audioRef = useRef(null);
+  const qrRef = useRef(null);
 
   useEffect(() => {
     async function fetchMemorial() {
@@ -90,6 +91,135 @@ export default function MemorialPage() {
     });
   };
 
+  const downloadQRCode = async () => {
+    if (!memorial) return;
+
+    // Generate QR code using a library approach
+    const QRCode = window.QRCode || (await import('qrcode').catch(() => null));
+    
+    const canvas = document.createElement('canvas');
+    const ctx = canvas.getContext('2d');
+    
+    // Set canvas size for card (600x800px for good quality)
+    canvas.width = 600;
+    canvas.height = 800;
+
+    // Background - Black to Dark Gray gradient
+    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+    gradient.addColorStop(0, '#000000');
+    gradient.addColorStop(1, '#1a1a1a');
+    ctx.fillStyle = gradient;
+    ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+    // Add decorative border
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 3;
+    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+    // Title "Memorial"
+    ctx.fillStyle = '#ffffff';
+    ctx.font = 'bold 48px Arial';
+    ctx.textAlign = 'center';
+    ctx.fillText('Memorial', canvas.width / 2, 100);
+
+    // Name
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '32px Arial';
+    const name = memorial.name || 'In Loving Memory';
+    ctx.fillText(name, canvas.width / 2, 160);
+
+    // Dates
+    ctx.fillStyle = '#cccccc';
+    ctx.font = '20px Arial';
+    const birthDate = formatDate(memorial.birth_date);
+    const deathDate = formatDate(memorial.death_date);
+    ctx.fillText(`${birthDate} — ${deathDate}`, canvas.width / 2, 200);
+
+    // Draw white background for QR
+    ctx.fillStyle = '#ffffff';
+    const qrSize = 280;
+    const qrX = (canvas.width - qrSize) / 2;
+    const qrY = 250;
+    const padding = 20;
+    ctx.fillRect(qrX - padding, qrY - padding, qrSize + padding * 2, qrSize + padding * 2);
+    
+    // Generate and draw QR code directly
+    try {
+      const qrCodeUrl = window.location.href;
+      
+      // Create a temporary canvas for QR code
+      const tempCanvas = document.createElement('canvas');
+      
+      // Try to use the displayed QR code first
+      const displayedQR = qrRef.current?.querySelector('canvas') || 
+                          qrRef.current?.querySelector('img') ||
+                          document.querySelector('canvas[data-qr]') ||
+                          document.querySelector('[role="img"]');
+      
+      if (displayedQR && displayedQR.tagName === 'CANVAS') {
+        // Use the displayed canvas
+        ctx.drawImage(displayedQR, qrX, qrY, qrSize, qrSize);
+      } else if (displayedQR && displayedQR.tagName === 'IMG') {
+        // Load and draw the image
+        await new Promise((resolve, reject) => {
+          const img = new Image();
+          img.crossOrigin = 'anonymous';
+          img.onload = () => {
+            ctx.drawImage(img, qrX, qrY, qrSize, qrSize);
+            resolve();
+          };
+          img.onerror = reject;
+          img.src = displayedQR.src;
+        });
+      } else {
+        // Generate QR using simple method - draw text as fallback
+        ctx.fillStyle = '#000000';
+        ctx.font = '12px monospace';
+        ctx.textAlign = 'center';
+        const urlText = qrCodeUrl.length > 30 ? qrCodeUrl.substring(0, 30) + '...' : qrCodeUrl;
+        ctx.fillText('QR Code', qrX + qrSize/2, qrY + qrSize/2 - 20);
+        ctx.font = '10px monospace';
+        ctx.fillText(urlText, qrX + qrSize/2, qrY + qrSize/2 + 20);
+        ctx.fillText('Scan from screen', qrX + qrSize/2, qrY + qrSize/2 + 40);
+      }
+    } catch (error) {
+      console.error('Error generating QR code:', error);
+    }
+
+    // "Scan to View Memorial" text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '22px Arial';
+    ctx.fillText('Scan to View Memorial', canvas.width / 2, 600);
+
+    // Decorative line
+    ctx.strokeStyle = '#ffffff';
+    ctx.lineWidth = 2;
+    ctx.beginPath();
+    ctx.moveTo(150, 630);
+    ctx.lineTo(450, 630);
+    ctx.stroke();
+
+    // Footer message
+    ctx.fillStyle = '#999999';
+    ctx.font = 'italic 18px Arial';
+    ctx.fillText('Forever in our hearts', canvas.width / 2, 680);
+
+    // Small dove/bird icon using text
+    ctx.fillStyle = '#ffffff';
+    ctx.font = '36px Arial';
+    ctx.fillText('🕊️', canvas.width / 2, 730);
+
+    // Convert canvas to blob and download
+    canvas.toBlob((blob) => {
+      const url = URL.createObjectURL(blob);
+      const link = document.createElement('a');
+      link.download = `${memorial.name || 'memorial'}-qr-card.png`;
+      link.href = url;
+      link.click();
+      URL.revokeObjectURL(url);
+    });
+  };
+
   const formatDate = (dateString) => {
     if (!dateString) return "";
     try {
@@ -145,13 +275,11 @@ export default function MemorialPage() {
     );
   }
 
-  // USE THE CORRECT COLUMN NAMES FROM YOUR DATABASE
   const profileImageUrl = memorial.profile_image_file;
   const galleryImages = memorial.gallery_files || [];
   const videoUrl = memorial.video_file;
   const musicUrl = memorial.music_file;
 
-  // Convert YouTube URLs to embed format if needed
   const embedUrl = videoUrl?.includes('youtube.com') || videoUrl?.includes('youtu.be')
     ? videoUrl.replace("watch?v=", "embed/").replace("youtu.be/", "youtube.com/embed/")
     : videoUrl;
@@ -439,16 +567,16 @@ export default function MemorialPage() {
                 <p className="text-xs text-neutral-500 font-medium tracking-wide uppercase">
                   Share Memorial
                 </p>
-                <div className="p-3 bg-white rounded-xl border border-neutral-200 shadow-sm">
+                <div ref={qrRef} className="p-3 bg-white rounded-xl border border-neutral-200 shadow-sm">
                   <QRGenerator link={`/memorials/${id}`} />
                 </div>
               </div>
 
-              {/* Share Button and Bird Counter */}
+              {/* Share Button, Bird Counter, and Download Button */}
               <div className="flex flex-col items-center gap-3">
                 <button
                   onClick={handleShare}
-                  className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-xl hover:from-neutral-800 hover:to-neutral-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105"
+                  className="flex items-center gap-3 px-6 py-3 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-xl hover:from-neutral-800 hover:to-neutral-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 min-w-[240px]"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -458,7 +586,7 @@ export default function MemorialPage() {
 
                 <button
                   onClick={handleBirdClick}
-                  className="flex items-center gap-3 px-6 py-3 bg-white rounded-xl border-2 border-neutral-200 hover:border-neutral-400 hover:shadow-lg transition-all transform hover:scale-105 group"
+                  className="flex items-center gap-3 px-6 py-3 bg-white rounded-xl border-2 border-neutral-200 hover:border-neutral-400 hover:shadow-lg transition-all transform hover:scale-105 group min-w-[240px]"
                 >
                   <svg className="w-5 h-5 text-neutral-600 group-hover:text-neutral-900 transition-colors" fill="none" stroke="currentColor" strokeWidth="2" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" d="M5 10c0-3 2-5 5-5s5 2 5 5v1c0 1.5 1 2.5 2 2.5s2-1 2-2.5c0-4-3-7-7-7S5 6 5 10m0 0c-1 0-2 .5-2 1.5s1 1.5 2 1.5m14 0c1 0 2-.5 2-1.5s-1-1.5-2-1.5M12 15c-2 0-3 1-3 2s1 2 3 2 3-1 3-2-1-2-3-2z"/>
@@ -467,6 +595,16 @@ export default function MemorialPage() {
                     <span className="text-sm font-bold text-neutral-800">{birdCount}</span>
                     <span className="text-xs text-neutral-500 font-medium">Birds of Farewell</span>
                   </div>
+                </button>
+
+                <button
+                  onClick={downloadQRCode}
+                  className="flex items-center justify-center gap-3 px-6 py-3 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-xl hover:from-neutral-800 hover:to-neutral-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 min-w-[240px]"
+                >
+                  <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
+                  </svg>
+                  <span className="text-sm font-semibold">Download QR Card</span>
                 </button>
               </div>
             </div>
