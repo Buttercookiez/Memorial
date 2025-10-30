@@ -22,7 +22,6 @@ export default function MemorialPage() {
   const qrRef = useRef(null);
 
   useEffect(() => {
-    // Check for saved dark mode preference
     const savedDarkMode = localStorage.getItem('memorialDarkMode');
     if (savedDarkMode === 'true') {
       setDarkMode(true);
@@ -69,7 +68,6 @@ export default function MemorialPage() {
     const newCount = birdCount + 1;
     setBirdCount(newCount);
     
-    // Create floating bird effect
     const button = event.currentTarget;
     const bird = document.createElement('div');
     bird.textContent = '🕊️';
@@ -116,15 +114,13 @@ export default function MemorialPage() {
     });
   };
 
- const downloadQRCode = async () => {
+  const downloadQRCode = async () => {
     if (!memorial) return;
 
     try {
-      // Generate QR code directly using QRCode library (same as dashboard)
       const QRCode = (await import('qrcode')).default;
       const url = window.location.href;
       
-      // Generate QR code as data URL
       const qrDataUrl = await QRCode.toDataURL(url, {
         width: 512,
         margin: 2,
@@ -134,7 +130,6 @@ export default function MemorialPage() {
         },
       });
 
-      // Create a temporary image to get the QR code
       const qrImage = new Image();
       qrImage.src = qrDataUrl;
       
@@ -181,7 +176,6 @@ export default function MemorialPage() {
       const padding = 20;
       ctx.fillRect(qrX - padding, qrY - padding, qrSize + padding * 2, qrSize + padding * 2);
       
-      // Draw QR code from generated image (this is the key change!)
       ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
 
       ctx.fillStyle = '#ffffff';
@@ -292,7 +286,7 @@ export default function MemorialPage() {
       label: "Biography", 
       shortLabel: "Bio",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 6.253v13m0-13C10.832 5.477 9.246 5 7.5 5S4.168 5.477 3 6.253v13C4.168 18.477 5.754 18 7.5 18s3.332.477 4.5 1.253m0-13C13.168 5.477 14.754 5 16.5 5c1.747 0 3.332.477 4.5 1.253v13C19.832 18.477 18.247 18 16.5 18c-1.746 0-3.332.477-4.5 1.253" />
         </svg>
       )
@@ -302,7 +296,7 @@ export default function MemorialPage() {
       label: "Gallery", 
       shortLabel: "Gallery",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16l4.586-4.586a2 2 0 012.828 0L16 16m-2-2l1.586-1.586a2 2 0 012.828 0L20 14m-6-6h.01M6 20h12a2 2 0 002-2V6a2 2 0 00-2-2H6a2 2 0 00-2 2v12a2 2 0 002 2z" />
         </svg>
       ),
@@ -313,7 +307,7 @@ export default function MemorialPage() {
       label: "Video", 
       shortLabel: "Video",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
         </svg>
       ),
@@ -324,7 +318,7 @@ export default function MemorialPage() {
       label: "Music", 
       shortLabel: "Music",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
         </svg>
       ),
@@ -335,7 +329,7 @@ export default function MemorialPage() {
       label: "Tributes", 
       shortLabel: "Tributes",
       icon: (
-        <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+        <svg className="w-4 h-4 sm:w-5 sm:h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
           <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
         </svg>
       )
@@ -345,7 +339,6 @@ export default function MemorialPage() {
   return (
     <>
       <div className={`min-h-screen ${darkMode ? 'bg-neutral-950' : 'bg-gradient-to-br from-neutral-50 to-neutral-100'} flex items-center justify-center p-2 sm:p-4`}>
-        {/* Dark Mode Toggle Button - Fixed Bottom Right */}
         <button
           onClick={toggleDarkMode}
           className={`fixed bottom-4 right-4 z-50 p-2.5 rounded-lg ${darkMode ? 'bg-white text-black' : 'bg-black text-white'} transition-all hover:scale-105`}
@@ -417,32 +410,30 @@ export default function MemorialPage() {
             )}
           </div>
 
-          {/* Tab Navigation */}
-          <div className={`border-b ${darkMode ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
-            <div className="flex justify-center overflow-x-auto">
-              <div className="flex">
-                {tabs.map((tab) => (
-                  <button
-                    key={tab.id}
-                    onClick={() => setActiveTab(tab.id)}
-                    className={`flex items-center gap-1.5 sm:gap-2 px-3 sm:px-6 py-3 sm:py-4 text-xs sm:text-sm font-medium transition-all whitespace-nowrap ${
-                      activeTab === tab.id
-                        ? darkMode 
-                          ? "text-white border-b-2 border-white" 
-                          : "text-neutral-900 border-b-2 border-neutral-900"
-                        : darkMode
-                          ? "text-neutral-500 hover:text-neutral-300"
-                          : "text-neutral-400 hover:text-neutral-600"
-                    }`}
-                  >
-                    <span className={`flex-shrink-0 ${activeTab === tab.id ? (darkMode ? "text-white" : "text-neutral-900") : (darkMode ? "text-neutral-500" : "text-neutral-400")}`}>
-                      {tab.icon}
-                    </span>
-                    <span className="hidden sm:inline">{tab.label}</span>
-                    <span className="sm:hidden">{tab.shortLabel}</span>
-                  </button>
-                ))}
-              </div>
+          {/* Tab Navigation - Optimized for Mobile */}
+          <div className={`border-b ${darkMode ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'} overflow-x-auto scrollbar-hide`}>
+            <div className="flex min-w-max">
+              {tabs.map((tab) => (
+                <button
+                  key={tab.id}
+                  onClick={() => setActiveTab(tab.id)}
+                  className={`flex items-center justify-center gap-1.5 px-4 sm:px-6 py-2.5 sm:py-4 text-xs sm:text-sm font-medium transition-all whitespace-nowrap flex-shrink-0 ${
+                    activeTab === tab.id
+                      ? darkMode 
+                        ? "text-white border-b-2 border-white" 
+                        : "text-neutral-900 border-b-2 border-neutral-900"
+                      : darkMode
+                        ? "text-neutral-500 hover:text-neutral-300"
+                        : "text-neutral-400 hover:text-neutral-600"
+                  }`}
+                >
+                  <span className={`flex-shrink-0 ${activeTab === tab.id ? (darkMode ? "text-white" : "text-neutral-900") : (darkMode ? "text-neutral-500" : "text-neutral-400")}`}>
+                    {tab.icon}
+                  </span>
+                  <span className="hidden sm:inline">{tab.label}</span>
+                  <span className="sm:hidden">{tab.shortLabel}</span>
+                </button>
+              ))}
             </div>
           </div>
 
@@ -527,7 +518,6 @@ export default function MemorialPage() {
 
             {activeTab === "music" && musicUrl && (
               <div className="animate-fadeIn space-y-6">
-                {/* Music Header */}
                 <div className="text-center space-y-2">
                   <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 mb-3">
                     <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -542,9 +532,7 @@ export default function MemorialPage() {
                   </p>
                 </div>
 
-                {/* Music Player Card */}
                 <div className={`relative rounded-2xl overflow-hidden shadow-2xl ${darkMode ? 'bg-gradient-to-br from-neutral-900 to-neutral-950 border border-neutral-800' : 'bg-gradient-to-br from-white to-neutral-50 border border-neutral-200'}`}>
-                  {/* Decorative background pattern */}
                   <div className="absolute inset-0 opacity-5">
                     <div className="absolute inset-0" style={{backgroundImage: 'radial-gradient(circle at 2px 2px, currentColor 1px, transparent 0)', backgroundSize: '32px 32px'}}></div>
                   </div>
@@ -561,7 +549,6 @@ export default function MemorialPage() {
                       </div>
                     ) : (
                       <div className="p-8 space-y-6">
-                        {/* Audio Visualizer Placeholder */}
                         <div className="flex items-center justify-center gap-1 h-24">
                           {[...Array(40)].map((_, i) => (
                             <div
@@ -579,7 +566,6 @@ export default function MemorialPage() {
                           ))}
                         </div>
                         
-                        {/* Custom Audio Player */}
                         <div className="space-y-4">
                           <audio 
                             ref={audioRef}
@@ -593,7 +579,6 @@ export default function MemorialPage() {
                             Your browser does not support the audio element.
                           </audio>
                           
-                          {/* Music Info */}
                           <div className={`text-center pt-4 border-t ${darkMode ? 'border-neutral-800' : 'border-neutral-200'}`}>
                             <p className={`text-xs ${darkMode ? 'text-neutral-500' : 'text-neutral-400'} italic`}>
                               "Music gives a soul to the universe, wings to the mind, flight to the imagination, and life to everything."
@@ -642,10 +627,10 @@ export default function MemorialPage() {
               </div>
 
               {/* Share Button, Bird Counter, and Download Button */}
-              <div className="flex flex-col items-center gap-3">
+              <div className="flex flex-col items-center gap-3 w-full sm:w-auto">
                 <button
                   onClick={handleShare}
-                  className="flex items-center justify-center gap-3 px-6 py-3 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-xl hover:from-neutral-800 hover:to-neutral-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 min-w-[240px]"
+                  className="flex items-center justify-center gap-3 px-6 py-3 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-xl hover:from-neutral-800 hover:to-neutral-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 w-full sm:min-w-[240px]"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M8.684 13.342C8.886 12.938 9 12.482 9 12c0-.482-.114-.938-.316-1.342m0 2.684a3 3 0 110-2.684m0 2.684l6.632 3.316m-6.632-6l6.632-3.316m0 0a3 3 0 105.367-2.684 3 3 0 00-5.367 2.684zm0 9.316a3 3 0 105.368 2.684 3 3 0 00-5.368-2.684z" />
@@ -655,7 +640,7 @@ export default function MemorialPage() {
 
                 <button
                   onClick={handleBirdClick}
-                  className={`relative flex items-center justify-center gap-3 px-6 py-3 ${darkMode ? 'bg-neutral-800 border-neutral-600 hover:border-neutral-500' : 'bg-white border-neutral-200 hover:border-neutral-400'} rounded-xl border-2 hover:shadow-xl transition-all transform hover:scale-105 group min-w-[240px] overflow-hidden`}
+                  className={`relative flex items-center justify-center gap-3 px-6 py-3 ${darkMode ? 'bg-neutral-800 border-neutral-600 hover:border-neutral-500' : 'bg-white border-neutral-200 hover:border-neutral-400'} rounded-xl border-2 hover:shadow-xl transition-all transform hover:scale-105 group w-full sm:min-w-[240px] overflow-hidden`}
                 >
                   <span className="text-xl group-hover:scale-110 transition-transform duration-300">🕊️</span>
                   <div className="flex items-center gap-1.5">
@@ -667,7 +652,7 @@ export default function MemorialPage() {
 
                 <button
                   onClick={downloadQRCode}
-                  className="flex items-center justify-center gap-3 px-6 py-3 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-xl hover:from-neutral-800 hover:to-neutral-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 min-w-[240px]"
+                  className="flex items-center justify-center gap-3 px-6 py-3 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-xl hover:from-neutral-800 hover:to-neutral-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 w-full sm:min-w-[240px]"
                 >
                   <svg className="w-5 h-5" fill="none" stroke="currentColor" viewBox="0 0 24 24">
                     <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 16v1a3 3 0 003 3h10a3 3 0 003-3v-1m-4-4l-4 4m0 0l-4-4m4 4V4" />
@@ -727,6 +712,16 @@ export default function MemorialPage() {
             font-size: 1.5rem;
             animation: floatUp 2s ease-out forwards;
             pointer-events: none;
+          }
+
+          /* Hide scrollbar for mobile navigation */
+          .scrollbar-hide {
+            -ms-overflow-style: none;
+            scrollbar-width: none;
+          }
+          
+          .scrollbar-hide::-webkit-scrollbar {
+            display: none;
           }
         `}</style>
       </div>
