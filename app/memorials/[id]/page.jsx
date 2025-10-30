@@ -116,111 +116,105 @@ export default function MemorialPage() {
     });
   };
 
-  const downloadQRCode = async () => {
+ const downloadQRCode = async () => {
     if (!memorial) return;
 
-    // Wait a bit for QR code to render if needed
-    await new Promise(resolve => setTimeout(resolve, 100));
-
-    // Get QR code from the component
-    const qrCanvas = qrRef.current?.querySelector('canvas');
-    if (!qrCanvas) {
-      alert('QR code not ready. Please wait a moment and try again.');
-      return;
-    }
-
-    // Check if canvas has content
     try {
-      const ctx = qrCanvas.getContext('2d');
-      const imageData = ctx.getImageData(0, 0, qrCanvas.width, qrCanvas.height);
-      const hasContent = imageData.data.some(pixel => pixel !== 0);
+      // Generate QR code directly using QRCode library (same as dashboard)
+      const QRCode = (await import('qrcode')).default;
+      const url = window.location.href;
       
-      if (!hasContent) {
-        alert('QR code is still loading. Please try again in a moment.');
-        return;
-      }
+      // Generate QR code as data URL
+      const qrDataUrl = await QRCode.toDataURL(url, {
+        width: 512,
+        margin: 2,
+        color: {
+          dark: "#000000",
+          light: "#FFFFFF",
+        },
+      });
+
+      // Create a temporary image to get the QR code
+      const qrImage = new Image();
+      qrImage.src = qrDataUrl;
+      
+      await new Promise((resolve) => {
+        qrImage.onload = resolve;
+      });
+
+      const canvas = document.createElement('canvas');
+      const ctx = canvas.getContext('2d');
+      
+      canvas.width = 600;
+      canvas.height = 800;
+
+      const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
+      gradient.addColorStop(0, '#000000');
+      gradient.addColorStop(1, '#1a1a1a');
+      ctx.fillStyle = gradient;
+      ctx.fillRect(0, 0, canvas.width, canvas.height);
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 3;
+      ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 48px Arial';
+      ctx.textAlign = 'center';
+      ctx.fillText('Memorial', canvas.width / 2, 100);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '32px Arial';
+      const name = memorial.name || 'In Loving Memory';
+      ctx.fillText(name, canvas.width / 2, 160);
+
+      ctx.fillStyle = '#cccccc';
+      ctx.font = '20px Arial';
+      const birthDate = formatDate(memorial.birth_date);
+      const deathDate = formatDate(memorial.death_date);
+      ctx.fillText(`${birthDate} — ${deathDate}`, canvas.width / 2, 200);
+
+      ctx.fillStyle = '#ffffff';
+      const qrSize = 280;
+      const qrX = (canvas.width - qrSize) / 2;
+      const qrY = 250;
+      const padding = 20;
+      ctx.fillRect(qrX - padding, qrY - padding, qrSize + padding * 2, qrSize + padding * 2);
+      
+      // Draw QR code from generated image (this is the key change!)
+      ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '22px Arial';
+      ctx.fillText('Scan to View Memorial', canvas.width / 2, 600);
+
+      ctx.strokeStyle = '#ffffff';
+      ctx.lineWidth = 2;
+      ctx.beginPath();
+      ctx.moveTo(150, 630);
+      ctx.lineTo(450, 630);
+      ctx.stroke();
+
+      ctx.fillStyle = '#999999';
+      ctx.font = 'italic 18px Arial';
+      ctx.fillText('Forever in our hearts', canvas.width / 2, 680);
+
+      ctx.fillStyle = '#ffffff';
+      ctx.font = '36px Arial';
+      ctx.fillText('🕊️', canvas.width / 2, 730);
+
+      canvas.toBlob((blob) => {
+        const url = URL.createObjectURL(blob);
+        const link = document.createElement('a');
+        link.download = `${memorial.name || 'memorial'}-qr-card.png`;
+        link.href = url;
+        link.click();
+        URL.revokeObjectURL(url);
+      });
     } catch (error) {
-      console.error('Error checking QR canvas:', error);
+      console.error('Error generating QR card:', error);
+      alert('Error generating QR card. Please try again.');
     }
-    
-    // Set canvas size for card (600x800px for good quality)
-    canvas.width = 600;
-    canvas.height = 800;
-
-    // Background - Black to Dark Gray gradient
-    const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
-    gradient.addColorStop(0, '#000000');
-    gradient.addColorStop(1, '#1a1a1a');
-    ctx.fillStyle = gradient;
-    ctx.fillRect(0, 0, canvas.width, canvas.height);
-
-    // Add decorative border
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 3;
-    ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
-
-    // Title "Memorial"
-    ctx.fillStyle = '#ffffff';
-    ctx.font = 'bold 48px Arial';
-    ctx.textAlign = 'center';
-    ctx.fillText('Memorial', canvas.width / 2, 100);
-
-    // Name
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '32px Arial';
-    const name = memorial.name || 'In Loving Memory';
-    ctx.fillText(name, canvas.width / 2, 160);
-
-    // Dates
-    ctx.fillStyle = '#cccccc';
-    ctx.font = '20px Arial';
-    const birthDate = formatDate(memorial.birth_date);
-    const deathDate = formatDate(memorial.death_date);
-    ctx.fillText(`${birthDate} — ${deathDate}`, canvas.width / 2, 200);
-
-    // Draw white background for QR
-    ctx.fillStyle = '#ffffff';
-    const qrSize = 280;
-    const qrX = (canvas.width - qrSize) / 2;
-    const qrY = 250;
-    const padding = 20;
-    ctx.fillRect(qrX - padding, qrY - padding, qrSize + padding * 2, qrSize + padding * 2);
-    
-    // Draw QR code
-    ctx.drawImage(qrCanvas, qrX, qrY, qrSize, qrSize);
-
-    // "Scan to View Memorial" text
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '22px Arial';
-    ctx.fillText('Scan to View Memorial', canvas.width / 2, 600);
-
-    // Decorative line
-    ctx.strokeStyle = '#ffffff';
-    ctx.lineWidth = 2;
-    ctx.beginPath();
-    ctx.moveTo(150, 630);
-    ctx.lineTo(450, 630);
-    ctx.stroke();
-
-    // Footer message
-    ctx.fillStyle = '#999999';
-    ctx.font = 'italic 18px Arial';
-    ctx.fillText('Forever in our hearts', canvas.width / 2, 680);
-
-    // Small dove/bird icon using text
-    ctx.fillStyle = '#ffffff';
-    ctx.font = '36px Arial';
-    ctx.fillText('🕊️', canvas.width / 2, 730);
-
-    // Convert canvas to blob and download
-    canvas.toBlob((blob) => {
-      const url = URL.createObjectURL(blob);
-      const link = document.createElement('a');
-      link.download = `${memorial.name || 'memorial'}-qr-card.png`;
-      link.href = url;
-      link.click();
-      URL.revokeObjectURL(url);
-    });
   };
 
   const formatDate = (dateString) => {
