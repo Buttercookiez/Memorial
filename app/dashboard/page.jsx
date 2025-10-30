@@ -974,22 +974,22 @@ export default function Dashboard() {
                   <div>
                     <p className={`text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'} mb-2`}>New Video:</p>
                     <div className={`relative ${darkMode ? 'bg-gradient-to-br from-neutral-900 to-neutral-800' : 'bg-gradient-to-br from-neutral-50 to-white'} rounded-2xl p-6 shadow-lg border ${darkMode ? 'border-neutral-700' : 'border-neutral-200'}`}>
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className={`${darkMode ? 'bg-neutral-800' : 'bg-neutral-100'} rounded-full p-4`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+                        <div className={`${darkMode ? 'bg-neutral-800' : 'bg-neutral-100'} rounded-full p-4 self-start sm:self-auto`}>
                           <svg className={`w-8 h-8 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
                         </div>
-                        <div className="flex-1">
-                          <p className={`font-medium ${darkMode ? 'text-white' : 'text-neutral-900'} mb-1`}>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium ${darkMode ? 'text-white' : 'text-neutral-900'} mb-1 truncate`}>
                             {formData.video_file.name}
                           </p>
                           <p className={`text-xs ${darkMode ? 'text-neutral-500' : 'text-neutral-400'}`}>
                             {(formData.video_file.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
-                        <label className="cursor-pointer">
-                          <div className={`${darkMode ? 'bg-white text-black hover:bg-neutral-200' : 'bg-neutral-900 text-white hover:bg-neutral-800'} px-4 py-2 rounded-lg transition-all font-medium text-sm`}>
+                        <label className="cursor-pointer flex-shrink-0">
+                          <div className={`${darkMode ? 'bg-white text-black hover:bg-neutral-200' : 'bg-neutral-900 text-white hover:bg-neutral-800'} px-4 py-2 rounded-lg transition-all font-medium text-sm whitespace-nowrap`}>
                             Change
                           </div>
                           <input
@@ -1011,22 +1011,22 @@ export default function Dashboard() {
                   <div>
                     <p className={`text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'} mb-2`}>Current Video:</p>
                     <div className={`relative ${darkMode ? 'bg-gradient-to-br from-neutral-900 to-neutral-800' : 'bg-gradient-to-br from-neutral-50 to-white'} rounded-2xl p-6 shadow-lg border ${darkMode ? 'border-neutral-700' : 'border-neutral-200'}`}>
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className={`${darkMode ? 'bg-neutral-800' : 'bg-neutral-100'} rounded-full p-4`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+                        <div className={`${darkMode ? 'bg-neutral-800' : 'bg-neutral-100'} rounded-full p-4 self-start sm:self-auto`}>
                           <svg className={`w-8 h-8 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M15 10l4.553-2.276A1 1 0 0121 8.618v6.764a1 1 0 01-1.447.894L15 14M5 18h8a2 2 0 002-2V8a2 2 0 00-2-2H5a2 2 0 00-2 2v8a2 2 0 002 2z" />
                           </svg>
                         </div>
-                        <div className="flex-1">
-                          <p className={`font-medium ${darkMode ? 'text-white' : 'text-neutral-900'} mb-1`}>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium ${darkMode ? 'text-white' : 'text-neutral-900'} mb-1 truncate`}>
                             Memorial Video
                           </p>
                           <p className={`text-xs ${darkMode ? 'text-neutral-500' : 'text-neutral-400'}`}>
                             Video file attached
                           </p>
                         </div>
-                        <label className="cursor-pointer">
-                          <div className={`${darkMode ? 'bg-white text-black hover:bg-neutral-200' : 'bg-neutral-900 text-white hover:bg-neutral-800'} px-4 py-2 rounded-lg transition-all font-medium text-sm`}>
+                        <label className="cursor-pointer flex-shrink-0">
+                          <div className={`${darkMode ? 'bg-white text-black hover:bg-neutral-200' : 'bg-neutral-900 text-white hover:bg-neutral-800'} px-4 py-2 rounded-lg transition-all font-medium text-sm whitespace-nowrap`}>
                             Change
                           </div>
                           <input
@@ -1075,22 +1075,22 @@ export default function Dashboard() {
                   <div>
                     <p className={`text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'} mb-2`}>New Music:</p>
                     <div className={`relative ${darkMode ? 'bg-gradient-to-br from-neutral-900 to-neutral-800' : 'bg-gradient-to-br from-neutral-50 to-white'} rounded-2xl p-6 shadow-lg border ${darkMode ? 'border-neutral-700' : 'border-neutral-200'}`}>
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className={`${darkMode ? 'bg-neutral-800' : 'bg-neutral-100'} rounded-full p-4`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+                        <div className={`${darkMode ? 'bg-neutral-800' : 'bg-neutral-100'} rounded-full p-4 self-start sm:self-auto`}>
                           <svg className={`w-8 h-8 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                           </svg>
                         </div>
-                        <div className="flex-1">
-                          <p className={`font-medium ${darkMode ? 'text-white' : 'text-neutral-900'} mb-1`}>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium ${darkMode ? 'text-white' : 'text-neutral-900'} mb-1 truncate`}>
                             {formData.music_file.name}
                           </p>
                           <p className={`text-xs ${darkMode ? 'text-neutral-500' : 'text-neutral-400'}`}>
                             {(formData.music_file.size / 1024 / 1024).toFixed(2)} MB
                           </p>
                         </div>
-                        <label className="cursor-pointer">
-                          <div className={`${darkMode ? 'bg-white text-black hover:bg-neutral-200' : 'bg-neutral-900 text-white hover:bg-neutral-800'} px-4 py-2 rounded-lg transition-all font-medium text-sm`}>
+                        <label className="cursor-pointer flex-shrink-0">
+                          <div className={`${darkMode ? 'bg-white text-black hover:bg-neutral-200' : 'bg-neutral-900 text-white hover:bg-neutral-800'} px-4 py-2 rounded-lg transition-all font-medium text-sm whitespace-nowrap`}>
                             Change
                           </div>
                           <input
@@ -1112,22 +1112,22 @@ export default function Dashboard() {
                   <div>
                     <p className={`text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'} mb-2`}>Current Music:</p>
                     <div className={`relative ${darkMode ? 'bg-gradient-to-br from-neutral-900 to-neutral-800' : 'bg-gradient-to-br from-neutral-50 to-white'} rounded-2xl p-6 shadow-lg border ${darkMode ? 'border-neutral-700' : 'border-neutral-200'}`}>
-                      <div className="flex items-center gap-4 mb-4">
-                        <div className={`${darkMode ? 'bg-neutral-800' : 'bg-neutral-100'} rounded-full p-4`}>
+                      <div className="flex flex-col sm:flex-row sm:items-center gap-4 mb-4">
+                        <div className={`${darkMode ? 'bg-neutral-800' : 'bg-neutral-100'} rounded-full p-4 self-start sm:self-auto`}>
                           <svg className={`w-8 h-8 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                             <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
                           </svg>
                         </div>
-                        <div className="flex-1">
-                          <p className={`font-medium ${darkMode ? 'text-white' : 'text-neutral-900'} mb-1`}>
+                        <div className="flex-1 min-w-0">
+                          <p className={`font-medium ${darkMode ? 'text-white' : 'text-neutral-900'} mb-1 truncate`}>
                             Memorial Music
                           </p>
                           <p className={`text-xs ${darkMode ? 'text-neutral-500' : 'text-neutral-400'}`}>
                             Audio file attached
                           </p>
                         </div>
-                        <label className="cursor-pointer">
-                          <div className={`${darkMode ? 'bg-white text-black hover:bg-neutral-200' : 'bg-neutral-900 text-white hover:bg-neutral-800'} px-4 py-2 rounded-lg transition-all font-medium text-sm`}>
+                        <label className="cursor-pointer flex-shrink-0">
+                          <div className={`${darkMode ? 'bg-white text-black hover:bg-neutral-200' : 'bg-neutral-900 text-white hover:bg-neutral-800'} px-4 py-2 rounded-lg transition-all font-medium text-sm whitespace-nowrap`}>
                             Change
                           </div>
                           <input
