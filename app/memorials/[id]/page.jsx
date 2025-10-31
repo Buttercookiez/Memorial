@@ -18,10 +18,10 @@ export default function MemorialPage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
-  const [showAutoplayPrompt, setShowAutoplayPrompt] = useState(false);
-  const [autoplayAttempted, setAutoplayAttempted] = useState(false);
+  const [musicStarted, setMusicStarted] = useState(false);
   const audioRef = useRef(null);
   const qrRef = useRef(null);
+  const userInteractedRef = useRef(false);
 
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('memorialDarkMode');
@@ -30,48 +30,56 @@ export default function MemorialPage() {
     }
   }, []);
 
-  // Enhanced auto-play music with user interaction detection
+  // Handle user interaction to start music
   useEffect(() => {
-    if (memorial?.music_file && audioRef.current && !autoplayAttempted) {
-      const playAudio = async () => {
-        try {
-          audioRef.current.volume = 1.0;
-          // Set playback rate to normal
-          audioRef.current.playbackRate = 1.0;
-          
-          // Add event listeners for better autoplay handling
-          const handleUserInteraction = () => {
-            playAudio();
-            document.removeEventListener('click', handleUserInteraction);
-            document.removeEventListener('touchstart', handleUserInteraction);
-          };
+    const handleUserInteraction = () => {
+      if (!userInteractedRef.current && memorial?.music_file && audioRef.current) {
+        userInteractedRef.current = true;
+        
+        const playMusic = async () => {
+          try {
+            audioRef.current.volume = 1.0; // Set to 100% volume
+            audioRef.current.playbackRate = 1.0;
+            await audioRef.current.play();
+            setMusicStarted(true);
+            console.log('Music started after user interaction');
+          } catch (error) {
+            console.error('Error playing music:', error);
+          }
+        };
 
-          // Try to play immediately
-          await audioRef.current.play();
-          console.log('Music started playing automatically');
-          setAutoplayAttempted(true);
-        } catch (error) {
-          console.log('Autoplay prevented by browser:', error);
-          setShowAutoplayPrompt(true);
-          setAutoplayAttempted(true);
-          
-          // Add event listeners for user interaction
-          document.addEventListener('click', handleUserInteraction);
-          document.addEventListener('touchstart', handleUserInteraction);
-        }
-      };
-      
-      // Use a longer delay and ensure component is fully mounted
-      const timer = setTimeout(playAudio, 1000);
-      return () => clearTimeout(timer);
+        playMusic();
+        
+        // Remove event listeners after first interaction
+        document.removeEventListener('click', handleUserInteraction);
+        document.removeEventListener('touchstart', handleUserInteraction);
+        document.removeEventListener('keydown', handleUserInteraction);
+      }
+    };
+
+    // Add event listeners for user interaction
+    document.addEventListener('click', handleUserInteraction);
+    document.addEventListener('touchstart', handleUserInteraction);
+    document.addEventListener('keydown', handleUserInteraction);
+
+    return () => {
+      document.removeEventListener('click', handleUserInteraction);
+      document.removeEventListener('touchstart', handleUserInteraction);
+      document.removeEventListener('keydown', handleUserInteraction);
+    };
+  }, [memorial?.music_file]);
+
+  // Auto-play music when component mounts if music is already started
+  useEffect(() => {
+    if (musicStarted && audioRef.current) {
+      audioRef.current.play().catch(console.error);
     }
-  }, [memorial?.music_file, autoplayAttempted]);
+  }, [musicStarted]);
 
   // Add visibility change handler to resume playback when tab becomes active
   useEffect(() => {
     const handleVisibilityChange = () => {
-      if (document.visibilityState === 'visible' && audioRef.current && memorial?.music_file) {
-        // Try to resume playback when user returns to the tab
+      if (document.visibilityState === 'visible' && audioRef.current && musicStarted) {
         audioRef.current.play().catch(console.error);
       }
     };
@@ -80,7 +88,7 @@ export default function MemorialPage() {
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
     };
-  }, [memorial?.music_file]);
+  }, [musicStarted]);
 
   useEffect(() => {
     async function fetchMemorial() {
@@ -116,17 +124,6 @@ export default function MemorialPage() {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
     localStorage.setItem('memorialDarkMode', newDarkMode.toString());
-  };
-
-  const handleAutoplayClick = () => {
-    if (audioRef.current) {
-      audioRef.current.play().then(() => {
-        console.log('Music started after user interaction');
-        setShowAutoplayPrompt(false);
-      }).catch(error => {
-        console.error('Error playing music:', error);
-      });
-    }
   };
 
   const handleBirdClick = async (event) => {
@@ -186,7 +183,7 @@ export default function MemorialPage() {
       const QRCode = (await import('qrcode')).default;
       const url = window.location.href;
       
-      // Generate QR code with website action
+      // Generate QR code with website action - Original QR code style
       const qrDataUrl = await QRCode.toDataURL(url, {
         width: 512,
         margin: 2,
@@ -250,19 +247,17 @@ export default function MemorialPage() {
       
       ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
 
-      // Scan instruction with "Go to Website"
+      // Scan instruction
       ctx.fillStyle = '#ffffff';
-      ctx.font = 'bold 24px Arial';
-      ctx.fillText('Scan QR Code', canvas.width / 2, 580);
       ctx.font = '22px Arial';
-      ctx.fillText('Go to Website', canvas.width / 2, 610);
+      ctx.fillText('Scan to View Memorial', canvas.width / 2, 600);
 
       // Decorative line
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(150, 640);
-      ctx.lineTo(450, 640);
+      ctx.moveTo(150, 630);
+      ctx.lineTo(450, 630);
       ctx.stroke();
 
       // Memorial message
@@ -417,7 +412,7 @@ export default function MemorialPage() {
 
   return (
     <>
-      {/* Hidden audio element for autoplay */}
+      {/* Single audio element used for both background and music tab */}
       {musicUrl && (
         <audio 
           ref={audioRef}
@@ -426,39 +421,6 @@ export default function MemorialPage() {
           src={musicUrl}
           style={{ display: 'none' }}
         />
-      )}
-
-      {/* Autoplay Prompt */}
-      {showAutoplayPrompt && memorial?.music_file && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-          <div className={`${darkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-neutral-200'} rounded-2xl border-2 p-8 max-w-md w-full text-center shadow-2xl`}>
-            <div className="mb-6">
-              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 mb-4">
-                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
-                </svg>
-              </div>
-              <h3 className={`text-2xl font-light mb-2 ${darkMode ? 'text-white' : 'text-neutral-900'}`}>
-                Play Memorial Music?
-              </h3>
-              <p className={`text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
-                A song in loving memory of {memorial.name}
-              </p>
-            </div>
-            <button
-              onClick={handleAutoplayClick}
-              className="w-full px-6 py-3 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-xl hover:from-neutral-800 hover:to-neutral-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 font-semibold"
-            >
-              Play Music
-            </button>
-            <button
-              onClick={() => setShowAutoplayPrompt(false)}
-              className={`mt-3 text-sm ${darkMode ? 'text-neutral-500 hover:text-neutral-400' : 'text-neutral-400 hover:text-neutral-600'}`}
-            >
-              Maybe later
-            </button>
-          </div>
-        </div>
       )}
 
       <div className={`min-h-screen ${darkMode ? 'bg-neutral-950' : 'bg-gradient-to-br from-neutral-50 to-neutral-100'} flex items-center justify-center p-2 sm:p-4`}>
@@ -690,13 +652,41 @@ export default function MemorialPage() {
                         </div>
                         
                         <div className="space-y-4">
+                          {/* Use the same audio element but show controls in music tab */}
                           <audio 
                             controls 
                             className="w-full"
                             style={{
                               filter: darkMode ? 'invert(1) hue-rotate(180deg)' : 'none'
                             }}
-                            src={musicUrl}
+                            ref={(el) => {
+                              if (el && audioRef.current) {
+                                // Sync the controlled audio element with our background audio
+                                el.src = musicUrl;
+                                el.volume = 1.0; // Set to 100% volume
+                                if (!audioRef.current.paused) {
+                                  el.currentTime = audioRef.current.currentTime;
+                                  el.play().catch(console.error);
+                                }
+                              }
+                            }}
+                            onPlay={() => {
+                              if (audioRef.current && audioRef.current.paused) {
+                                audioRef.current.currentTime = audioRef.current.currentTime;
+                                audioRef.current.play().catch(console.error);
+                              }
+                              setMusicStarted(true);
+                            }}
+                            onPause={() => {
+                              if (audioRef.current) {
+                                audioRef.current.pause();
+                              }
+                            }}
+                            onSeeked={(e) => {
+                              if (audioRef.current) {
+                                audioRef.current.currentTime = e.target.currentTime;
+                              }
+                            }}
                             loop
                           >
                             Your browser does not support the audio element.
@@ -745,12 +735,7 @@ export default function MemorialPage() {
                   Share Memorial
                 </p>
                 <div ref={qrRef} className="p-3 bg-white rounded-xl border border-neutral-200 shadow-sm">
-                  <QRGenerator 
-                    link={typeof window !== 'undefined' ? window.location.href : ''} 
-                    title={`Visit ${memorial.name}'s Memorial`}
-                    showActionText={true}
-                    actionText="Go to Website"
-                  />
+                  <QRGenerator link={`/memorials/${id}`} />
                 </div>
               </div>
 
