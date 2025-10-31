@@ -19,6 +19,7 @@ export default function MemorialPage() {
   const [showModal, setShowModal] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
   const [showAutoplayPrompt, setShowAutoplayPrompt] = useState(false);
+  const [autoplayAttempted, setAutoplayAttempted] = useState(false);
   const audioRef = useRef(null);
   const qrRef = useRef(null);
 
@@ -29,24 +30,56 @@ export default function MemorialPage() {
     }
   }, []);
 
-  // Auto-play music when component mounts
+  // Enhanced auto-play music with user interaction detection
   useEffect(() => {
-    if (memorial?.music_file && audioRef.current) {
+    if (memorial?.music_file && audioRef.current && !autoplayAttempted) {
       const playAudio = async () => {
         try {
-          audioRef.current.volume = 1.0; // Set to 100% volume
+          audioRef.current.volume = 1.0;
+          // Set playback rate to normal
+          audioRef.current.playbackRate = 1.0;
+          
+          // Add event listeners for better autoplay handling
+          const handleUserInteraction = () => {
+            playAudio();
+            document.removeEventListener('click', handleUserInteraction);
+            document.removeEventListener('touchstart', handleUserInteraction);
+          };
+
+          // Try to play immediately
           await audioRef.current.play();
           console.log('Music started playing automatically');
+          setAutoplayAttempted(true);
         } catch (error) {
           console.log('Autoplay prevented by browser:', error);
           setShowAutoplayPrompt(true);
+          setAutoplayAttempted(true);
+          
+          // Add event listeners for user interaction
+          document.addEventListener('click', handleUserInteraction);
+          document.addEventListener('touchstart', handleUserInteraction);
         }
       };
       
-      // Small delay to ensure audio element is ready
-      const timer = setTimeout(playAudio, 500);
+      // Use a longer delay and ensure component is fully mounted
+      const timer = setTimeout(playAudio, 1000);
       return () => clearTimeout(timer);
     }
+  }, [memorial?.music_file, autoplayAttempted]);
+
+  // Add visibility change handler to resume playback when tab becomes active
+  useEffect(() => {
+    const handleVisibilityChange = () => {
+      if (document.visibilityState === 'visible' && audioRef.current && memorial?.music_file) {
+        // Try to resume playback when user returns to the tab
+        audioRef.current.play().catch(console.error);
+      }
+    };
+
+    document.addEventListener('visibilitychange', handleVisibilityChange);
+    return () => {
+      document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
   }, [memorial?.music_file]);
 
   useEffect(() => {
@@ -87,8 +120,12 @@ export default function MemorialPage() {
 
   const handleAutoplayClick = () => {
     if (audioRef.current) {
-      audioRef.current.play();
-      setShowAutoplayPrompt(false);
+      audioRef.current.play().then(() => {
+        console.log('Music started after user interaction');
+        setShowAutoplayPrompt(false);
+      }).catch(error => {
+        console.error('Error playing music:', error);
+      });
     }
   };
 
@@ -149,6 +186,7 @@ export default function MemorialPage() {
       const QRCode = (await import('qrcode')).default;
       const url = window.location.href;
       
+      // Generate QR code with website action
       const qrDataUrl = await QRCode.toDataURL(url, {
         width: 512,
         margin: 2,
@@ -171,32 +209,38 @@ export default function MemorialPage() {
       canvas.width = 600;
       canvas.height = 800;
 
+      // Background gradient
       const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
       gradient.addColorStop(0, '#000000');
       gradient.addColorStop(1, '#1a1a1a');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
+      // Border
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 3;
       ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
+      // Title
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 48px Arial';
       ctx.textAlign = 'center';
       ctx.fillText('Memorial', canvas.width / 2, 100);
 
+      // Name
       ctx.fillStyle = '#ffffff';
       ctx.font = '32px Arial';
       const name = memorial.name || 'In Loving Memory';
       ctx.fillText(name, canvas.width / 2, 160);
 
+      // Dates
       ctx.fillStyle = '#cccccc';
       ctx.font = '20px Arial';
       const birthDate = formatDate(memorial.birth_date);
       const deathDate = formatDate(memorial.death_date);
       ctx.fillText(`${birthDate} — ${deathDate}`, canvas.width / 2, 200);
 
+      // QR Code with white background
       ctx.fillStyle = '#ffffff';
       const qrSize = 280;
       const qrX = (canvas.width - qrSize) / 2;
@@ -206,25 +250,32 @@ export default function MemorialPage() {
       
       ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
 
+      // Scan instruction with "Go to Website"
       ctx.fillStyle = '#ffffff';
+      ctx.font = 'bold 24px Arial';
+      ctx.fillText('Scan QR Code', canvas.width / 2, 580);
       ctx.font = '22px Arial';
-      ctx.fillText('Scan to View Memorial', canvas.width / 2, 600);
+      ctx.fillText('Go to Website', canvas.width / 2, 610);
 
+      // Decorative line
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2;
       ctx.beginPath();
-      ctx.moveTo(150, 630);
-      ctx.lineTo(450, 630);
+      ctx.moveTo(150, 640);
+      ctx.lineTo(450, 640);
       ctx.stroke();
 
+      // Memorial message
       ctx.fillStyle = '#999999';
       ctx.font = 'italic 18px Arial';
       ctx.fillText('Forever in our hearts', canvas.width / 2, 680);
 
+      // Dove icon
       ctx.fillStyle = '#ffffff';
       ctx.font = '36px Arial';
       ctx.fillText('🕊️', canvas.width / 2, 730);
 
+      // Convert to blob and download
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -366,6 +417,17 @@ export default function MemorialPage() {
 
   return (
     <>
+      {/* Hidden audio element for autoplay */}
+      {musicUrl && (
+        <audio 
+          ref={audioRef}
+          loop
+          preload="auto"
+          src={musicUrl}
+          style={{ display: 'none' }}
+        />
+      )}
+
       {/* Autoplay Prompt */}
       {showAutoplayPrompt && memorial?.music_file && (
         <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
@@ -629,7 +691,6 @@ export default function MemorialPage() {
                         
                         <div className="space-y-4">
                           <audio 
-                            ref={audioRef}
                             controls 
                             className="w-full"
                             style={{
@@ -684,7 +745,12 @@ export default function MemorialPage() {
                   Share Memorial
                 </p>
                 <div ref={qrRef} className="p-3 bg-white rounded-xl border border-neutral-200 shadow-sm">
-                  <QRGenerator link={`/memorials/${id}`} />
+                  <QRGenerator 
+                    link={typeof window !== 'undefined' ? window.location.href : ''} 
+                    title={`Visit ${memorial.name}'s Memorial`}
+                    showActionText={true}
+                    actionText="Go to Website"
+                  />
                 </div>
               </div>
 
