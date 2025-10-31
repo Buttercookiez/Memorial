@@ -30,7 +30,7 @@ export default function MemorialPage() {
     }
   }, []);
 
-  // Handle user interaction to start music
+  // Handle user interaction to start music - Enhanced for mobile
   useEffect(() => {
     const handleUserInteraction = () => {
       if (!userInteractedRef.current && memorial?.music_file && audioRef.current) {
@@ -53,19 +53,38 @@ export default function MemorialPage() {
         // Remove event listeners after first interaction
         document.removeEventListener('click', handleUserInteraction);
         document.removeEventListener('touchstart', handleUserInteraction);
+        document.removeEventListener('touchend', handleUserInteraction);
+        document.removeEventListener('touchmove', handleUserInteraction);
+        document.removeEventListener('touchcancel', handleUserInteraction);
+        document.removeEventListener('scroll', handleUserInteraction);
+        document.removeEventListener('wheel', handleUserInteraction);
         document.removeEventListener('keydown', handleUserInteraction);
+        document.removeEventListener('mousedown', handleUserInteraction);
+        document.removeEventListener('mouseup', handleUserInteraction);
+        document.removeEventListener('mousemove', handleUserInteraction);
       }
     };
 
-    // Add event listeners for user interaction
-    document.addEventListener('click', handleUserInteraction);
-    document.addEventListener('touchstart', handleUserInteraction);
-    document.addEventListener('keydown', handleUserInteraction);
+    // Add comprehensive event listeners for all types of user interactions
+    const events = [
+      'click', 'touchstart', 'touchend', 'touchmove', 'touchcancel',
+      'scroll', 'wheel', 'keydown', 'mousedown', 'mouseup', 'mousemove'
+    ];
+
+    events.forEach(event => {
+      document.addEventListener(event, handleUserInteraction, { 
+        passive: true, // Important for scroll/touch performance
+        capture: true  // Capture events in capture phase
+      });
+    });
 
     return () => {
-      document.removeEventListener('click', handleUserInteraction);
-      document.removeEventListener('touchstart', handleUserInteraction);
-      document.removeEventListener('keydown', handleUserInteraction);
+      events.forEach(event => {
+        document.removeEventListener(event, handleUserInteraction, { 
+          passive: true,
+          capture: true 
+        });
+      });
     };
   }, [memorial?.music_file]);
 
@@ -822,7 +841,7 @@ export default function MemorialPage() {
           .floating-bird {
             position: absolute;
             bottom: 50%;
-            font-size: 1.5rem;
+            font-size = 1.5rem;
             animation: floatUp 2s ease-out forwards;
             pointer-events: none;
           }
