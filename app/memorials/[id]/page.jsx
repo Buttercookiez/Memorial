@@ -18,6 +18,7 @@ export default function MemorialPage() {
   const [selectedImage, setSelectedImage] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
+  const [showAutoplayPrompt, setShowAutoplayPrompt] = useState(false);
   const audioRef = useRef(null);
   const qrRef = useRef(null);
 
@@ -27,6 +28,26 @@ export default function MemorialPage() {
       setDarkMode(true);
     }
   }, []);
+
+  // Auto-play music when component mounts
+  useEffect(() => {
+    if (memorial?.music_file && audioRef.current) {
+      const playAudio = async () => {
+        try {
+          audioRef.current.volume = 1.0; // Set to 100% volume
+          await audioRef.current.play();
+          console.log('Music started playing automatically');
+        } catch (error) {
+          console.log('Autoplay prevented by browser:', error);
+          setShowAutoplayPrompt(true);
+        }
+      };
+      
+      // Small delay to ensure audio element is ready
+      const timer = setTimeout(playAudio, 500);
+      return () => clearTimeout(timer);
+    }
+  }, [memorial?.music_file]);
 
   useEffect(() => {
     async function fetchMemorial() {
@@ -62,6 +83,13 @@ export default function MemorialPage() {
     const newDarkMode = !darkMode;
     setDarkMode(newDarkMode);
     localStorage.setItem('memorialDarkMode', newDarkMode.toString());
+  };
+
+  const handleAutoplayClick = () => {
+    if (audioRef.current) {
+      audioRef.current.play();
+      setShowAutoplayPrompt(false);
+    }
   };
 
   const handleBirdClick = async (event) => {
@@ -338,6 +366,39 @@ export default function MemorialPage() {
 
   return (
     <>
+      {/* Autoplay Prompt */}
+      {showAutoplayPrompt && memorial?.music_file && (
+        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
+          <div className={`${darkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-neutral-200'} rounded-2xl border-2 p-8 max-w-md w-full text-center shadow-2xl`}>
+            <div className="mb-6">
+              <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 mb-4">
+                <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                  <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M9 19V6l12-3v13M9 19c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zm12-3c0 1.105-1.343 2-3 2s-3-.895-3-2 1.343-2 3-2 3 .895 3 2zM9 10l12-3" />
+                </svg>
+              </div>
+              <h3 className={`text-2xl font-light mb-2 ${darkMode ? 'text-white' : 'text-neutral-900'}`}>
+                Play Memorial Music?
+              </h3>
+              <p className={`text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>
+                A song in loving memory of {memorial.name}
+              </p>
+            </div>
+            <button
+              onClick={handleAutoplayClick}
+              className="w-full px-6 py-3 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-xl hover:from-neutral-800 hover:to-neutral-700 transition-all shadow-lg hover:shadow-xl transform hover:scale-105 font-semibold"
+            >
+              Play Music
+            </button>
+            <button
+              onClick={() => setShowAutoplayPrompt(false)}
+              className={`mt-3 text-sm ${darkMode ? 'text-neutral-500 hover:text-neutral-400' : 'text-neutral-400 hover:text-neutral-600'}`}
+            >
+              Maybe later
+            </button>
+          </div>
+        </div>
+      )}
+
       <div className={`min-h-screen ${darkMode ? 'bg-neutral-950' : 'bg-gradient-to-br from-neutral-50 to-neutral-100'} flex items-center justify-center p-2 sm:p-4`}>
         <button
           onClick={toggleDarkMode}
@@ -575,6 +636,7 @@ export default function MemorialPage() {
                               filter: darkMode ? 'invert(1) hue-rotate(180deg)' : 'none'
                             }}
                             src={musicUrl}
+                            loop
                           >
                             Your browser does not support the audio element.
                           </audio>
