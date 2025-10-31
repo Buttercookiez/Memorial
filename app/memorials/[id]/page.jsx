@@ -29,24 +29,58 @@ export default function MemorialPage() {
     }
   }, []);
 
-  // Auto-play music when component mounts
+  // Auto-play music when component mounts or page loads
   useEffect(() => {
     if (memorial?.music_file && audioRef.current) {
       const playAudio = async () => {
         try {
-          audioRef.current.volume = 1.0; // Set to 100% volume
+          audioRef.current.volume = 1.0;
           await audioRef.current.play();
           console.log('Music started playing automatically');
+          setShowAutoplayPrompt(false);
         } catch (error) {
           console.log('Autoplay prevented by browser:', error);
           setShowAutoplayPrompt(true);
         }
       };
       
-      // Small delay to ensure audio element is ready
-      const timer = setTimeout(playAudio, 500);
-      return () => clearTimeout(timer);
+      playAudio();
     }
+  }, [memorial?.music_file]);
+
+  // Try to autoplay on any user interaction
+  useEffect(() => {
+    if (!memorial?.music_file || !audioRef.current) return;
+
+    const attemptPlay = async () => {
+      try {
+        audioRef.current.volume = 1.0;
+        await audioRef.current.play();
+        console.log('Music started playing');
+        setShowAutoplayPrompt(false);
+      } catch (error) {
+        console.log('Autoplay requires user interaction');
+      }
+    };
+
+    // Try multiple interaction events
+    const events = ['click', 'touchstart', 'keydown'];
+    const handleInteraction = () => {
+      attemptPlay();
+      events.forEach(event => {
+        document.removeEventListener(event, handleInteraction);
+      });
+    };
+
+    events.forEach(event => {
+      document.addEventListener(event, handleInteraction, { once: true });
+    });
+
+    return () => {
+      events.forEach(event => {
+        document.removeEventListener(event, handleInteraction);
+      });
+    };
   }, [memorial?.music_file]);
 
   useEffect(() => {
@@ -368,8 +402,14 @@ export default function MemorialPage() {
     <>
       {/* Autoplay Prompt */}
       {showAutoplayPrompt && memorial?.music_file && (
-        <div className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4">
-          <div className={`${darkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-neutral-200'} rounded-2xl border-2 p-8 max-w-md w-full text-center shadow-2xl`}>
+        <div 
+          className="fixed inset-0 bg-black bg-opacity-80 flex items-center justify-center z-50 p-4"
+          onClick={handleAutoplayClick}
+        >
+          <div 
+            className={`${darkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-neutral-200'} rounded-2xl border-2 p-8 max-w-md w-full text-center shadow-2xl`}
+            onClick={(e) => e.stopPropagation()}
+          >
             <div className="mb-6">
               <div className="inline-flex items-center justify-center w-20 h-20 rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 mb-4">
                 <svg className="w-10 h-10 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -684,7 +724,7 @@ export default function MemorialPage() {
                   Share Memorial
                 </p>
                 <div ref={qrRef} className="p-3 bg-white rounded-xl border border-neutral-200 shadow-sm">
-                  <QRGenerator link={`/memorials/${id}`} />
+                  <QRGenerator link={window.location.href} />
                 </div>
               </div>
 
