@@ -23,6 +23,12 @@ export default function MemorialPage() {
   const qrRef = useRef(null);
   const userInteractedRef = useRef(false);
   const musicTabAudioRef = useRef(null);
+  const [tributes, setTributes] = useState([]);
+  const [showTributeForm, setShowTributeForm] = useState(false);
+  const [tributeForm, setTributeForm] = useState({ name: '', message: '' });
+  const [selectedTribute, setSelectedTribute] = useState(null);
+  const [isSubmitting, setIsSubmitting] = useState(false);
+  const [envelopeOpened, setEnvelopeOpened] = useState(false);
 
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('memorialDarkMode');
@@ -157,6 +163,30 @@ export default function MemorialPage() {
     }
     
     if (id) fetchMemorial();
+  }, [id]);
+
+  // Fetch tributes
+  useEffect(() => {
+    async function fetchTributes() {
+      try {
+        const { data, error } = await supabase
+          .from("tributes")
+          .select("*")
+          .eq("memorial_id", id)
+          .order("created_at", { ascending: false });
+
+        if (error) {
+          console.error("Error fetching tributes:", error);
+          return;
+        }
+
+        setTributes(data || []);
+      } catch (error) {
+        console.error("Unexpected error fetching tributes:", error);
+      }
+    }
+    
+    if (id) fetchTributes();
   }, [id]);
 
   const toggleDarkMode = () => {
@@ -349,6 +379,71 @@ export default function MemorialPage() {
     }
     
     setSelectedImage(memorial.gallery_files[newIndex]);
+  };
+
+  const handleTributeSubmit = async (e) => {
+    e.preventDefault();
+    if (!tributeForm.name.trim() || !tributeForm.message.trim()) return;
+    
+    setIsSubmitting(true);
+    
+    try {
+      const { data, error } = await supabase
+        .from("tributes")
+        .insert([
+          {
+            memorial_id: id,
+            name: tributeForm.name.trim(),
+            message: tributeForm.message.trim(),
+            created_at: new Date().toISOString()
+          }
+        ])
+        .select();
+
+      if (error) {
+        console.error("Error submitting tribute:", error);
+        alert("Error submitting tribute. Please try again.");
+        return;
+      }
+
+      if (data && data[0]) {
+        setTributes(prev => [data[0], ...prev]);
+        setTributeForm({ name: '', message: '' });
+        setShowTributeForm(false);
+        
+        // Trigger envelope scatter animation
+        const container = document.querySelector('.envelopes-container');
+        if (container) {
+          const envelope = document.createElement('div');
+          envelope.className = 'new-envelope';
+          envelope.style.left = `${Math.random() * 100}%`;
+          envelope.style.top = `${Math.random() * 100}%`;
+          envelope.textContent = Math.random() > 0.5 ? '✉️' : '📧';
+          container.appendChild(envelope);
+          
+          setTimeout(() => envelope.remove(), 2000);
+        }
+      }
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      alert("Error submitting tribute. Please try again.");
+    } finally {
+      setIsSubmitting(false);
+    }
+  };
+
+  const openTribute = (tribute) => {
+    setSelectedTribute(tribute);
+    setEnvelopeOpened(false);
+  };
+
+  const closeTribute = () => {
+    setSelectedTribute(null);
+    setEnvelopeOpened(false);
+  };
+
+  const handleEnvelopeClick = () => {
+    setEnvelopeOpened(true);
   };
 
   if (loading) {
@@ -737,14 +832,59 @@ export default function MemorialPage() {
 
             {activeTab === "tributes" && (
               <div className="animate-fadeIn">
-                <div className={`text-center ${darkMode ? 'text-neutral-500' : 'text-neutral-400'} py-12`}>
-                  <svg className={`w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 ${darkMode ? 'text-neutral-600' : 'text-neutral-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
-                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
-                  </svg>
-                  <p className={`mb-2 ${darkMode ? 'text-neutral-400' : 'text-neutral-500'} text-sm`}>Tributes section coming soon</p>
-                  <p className={`text-xs ${darkMode ? 'text-neutral-600' : 'text-neutral-400'}`}>
-                    Share your memories and condolences
-                  </p>
+                <div className="space-y-6">
+                  {/* Add Tribute Button */}
+                  <div className="text-center">
+                    <button
+                      onClick={() => setShowTributeForm(true)}
+                      className="inline-flex items-center gap-2 px-5 py-2.5 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-lg hover:from-neutral-800 hover:to-neutral-700 transition-all shadow-md hover:shadow-lg transform hover:scale-105 text-sm"
+                    >
+                      <svg className="w-4 h-4" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M12 4v16m8-8H4" />
+                      </svg>
+                      <span className="font-semibold">Write a Tribute</span>
+                    </button>
+                  </div>
+
+                  {/* Tributes Display */}
+                  {tributes.length > 0 ? (
+                    <div className="relative min-h-[400px] envelopes-container">
+                      {tributes.map((tribute, index) => {
+                        const isBlack = index % 2 === 0;
+                        const rotation = (Math.random() - 0.5) * 30;
+                        const xPos = (index % 5) * 18 + Math.random() * 12;
+                        const yPos = Math.floor(index / 5) * 110 + Math.random() * 30;
+                        
+                        return (
+                          <button
+                            key={tribute.id}
+                            onClick={() => openTribute(tribute)}
+                            className={`absolute envelope ${isBlack ? 'envelope-black' : 'envelope-white'} cursor-pointer transition-all duration-300`}
+                            style={{
+                              left: `${xPos}%`,
+                              top: `${yPos}px`,
+                              transform: `rotate(${rotation}deg)`,
+                              zIndex: tributes.length - index
+                            }}
+                          >
+                            <div className="envelope-icon text-5xl">
+                              {isBlack ? '✉️' : '📧'}
+                            </div>
+                          </button>
+                        );
+                      })}
+                    </div>
+                  ) : (
+                    <div className={`text-center ${darkMode ? 'text-neutral-500' : 'text-neutral-400'} py-12`}>
+                      <svg className={`w-12 h-12 sm:w-16 sm:h-16 mx-auto mb-4 ${darkMode ? 'text-neutral-600' : 'text-neutral-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                        <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={1.5} d="M4.318 6.318a4.5 4.5 0 000 6.364L12 20.364l7.682-7.682a4.5 4.5 0 00-6.364-6.364L12 7.636l-1.318-1.318a4.5 4.5 0 00-6.364 0z" />
+                      </svg>
+                      <p className={`mb-2 ${darkMode ? 'text-neutral-400' : 'text-neutral-500'} text-sm`}>No tributes yet</p>
+                      <p className={`text-xs ${darkMode ? 'text-neutral-600' : 'text-neutral-400'}`}>
+                        Be the first to share your memories
+                      </p>
+                    </div>
+                  )}
                 </div>
               </div>
             )}
@@ -859,6 +999,123 @@ export default function MemorialPage() {
           .scrollbar-hide::-webkit-scrollbar {
             display: none;
           }
+
+          .envelope {
+            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
+            filter: drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.3));
+          }
+
+          .envelope:hover {
+            filter: drop-shadow(6px 6px 12px rgba(0, 0, 0, 0.4)) brightness(1.1);
+            transform: scale(1.15) !important;
+          }
+
+          .envelope:active {
+            transform: scale(0.95) !important;
+          }
+
+          .envelope-icon {
+            filter: grayscale(100%) contrast(1.2);
+            transition: filter 0.3s ease;
+          }
+
+          .envelope:hover .envelope-icon {
+            filter: grayscale(80%) contrast(1.3);
+          }
+
+          .envelope-black .envelope-icon {
+            filter: grayscale(100%) brightness(0.4) contrast(1.5);
+          }
+
+          .envelope-white .envelope-icon {
+            filter: grayscale(100%) brightness(1.3) contrast(1.2);
+          }
+
+          @keyframes envelopeScatter {
+            0% {
+              opacity: 0;
+              transform: scale(0) rotate(0deg) translateY(-50px);
+            }
+            50% {
+              opacity: 1;
+              transform: scale(1.2) rotate(180deg) translateY(0px);
+            }
+            100% {
+              opacity: 1;
+              transform: scale(1) rotate(360deg) translateY(0px);
+            }
+          }
+
+          .new-envelope {
+            position: absolute;
+            font-size: 3rem;
+            animation: envelopeScatter 2.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+            pointer-events: none;
+            z-index: 1000;
+            filter: grayscale(100%) contrast(1.3);
+          }
+
+          @keyframes envelopeOpen {
+            0% {
+              transform: perspective(1000px) rotateX(0deg);
+            }
+            100% {
+              transform: perspective(1000px) rotateX(-180deg);
+            }
+          }
+
+          @keyframes envelopeSlant {
+            0% {
+              transform: rotate(0deg) scale(1);
+            }
+            100% {
+              transform: rotate(-15deg) scale(0.7) translateY(50px);
+            }
+          }
+
+          @keyframes letterSlideOut {
+            0% {
+              transform: translateY(100%);
+              opacity: 0;
+            }
+            50% {
+              transform: translateY(-20px);
+              opacity: 0.8;
+            }
+            100% {
+              transform: translateY(0);
+              opacity: 1;
+            }
+          }
+
+          @keyframes fadeInScale {
+            0% {
+              transform: scale(0.8);
+              opacity: 0;
+            }
+            100% {
+              transform: scale(1);
+              opacity: 1;
+            }
+          }
+
+          .envelope-modal-closed {
+            animation: fadeInScale 0.3s ease-out forwards;
+          }
+
+          .envelope-opening .envelope-flap {
+            animation: envelopeOpen 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+            transform-origin: top center;
+          }
+
+          .envelope-opening .envelope-body {
+            animation: envelopeSlant 0.8s ease-out forwards;
+          }
+
+          .letter-sliding-out {
+            animation: letterSlideOut 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.5s forwards;
+            opacity: 0;
+          }
         `}</style>
       </div>
 
@@ -907,6 +1164,296 @@ export default function MemorialPage() {
                 {galleryImages.indexOf(selectedImage) + 1} / {galleryImages.length}
               </div>
             )}
+          </div>
+        </div>
+      )}
+
+      {/* Tribute Form Modal */}
+      {showTributeForm && (
+        <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
+          <div className={`relative max-w-lg w-full ${darkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-neutral-200'} rounded-2xl border-2 shadow-2xl`}>
+            <button
+              onClick={() => setShowTributeForm(false)}
+              className="absolute top-4 right-4 text-neutral-400 hover:text-neutral-600 transition-colors"
+            >
+              <svg className="w-6 h-6" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="p-8">
+              <div className="text-center mb-6">
+                <div className="inline-flex items-center justify-center w-16 h-16 rounded-full bg-gradient-to-br from-neutral-800 to-neutral-900 mb-4">
+                  <svg className="w-8 h-8 text-white" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                    <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M11 5H6a2 2 0 00-2 2v11a2 2 0 002 2h11a2 2 0 002-2v-5m-1.414-9.414a2 2 0 112.828 2.828L11.828 15H9v-2.828l8.586-8.586z" />
+                  </svg>
+                </div>
+                <h3 className={`text-2xl font-light ${darkMode ? 'text-white' : 'text-neutral-900'}`}>
+                  Share Your Tribute
+                </h3>
+                <p className={`text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-500'} mt-2`}>
+                  Write a message to honor {memorial?.name}
+                </p>
+              </div>
+
+              <form onSubmit={handleTributeSubmit} className="space-y-4">
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
+                    Your Name
+                  </label>
+                  <input
+                    type="text"
+                    value={tributeForm.name}
+                    onChange={(e) => setTributeForm(prev => ({ ...prev, name: e.target.value }))}
+                    className={`w-full px-4 py-3 rounded-xl border ${darkMode ? 'bg-neutral-800 border-neutral-700 text-white placeholder-neutral-500' : 'bg-white border-neutral-300 text-neutral-900 placeholder-neutral-400'} focus:outline-none focus:ring-2 focus:ring-neutral-500`}
+                    placeholder="Enter your name"
+                    required
+                    maxLength={50}
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
+                    Your Message
+                  </label>
+                  <textarea
+                    value={tributeForm.message}
+                    onChange={(e) => setTributeForm(prev => ({ ...prev, message: e.target.value }))}
+                    className={`w-full px-4 py-3 rounded-xl border ${darkMode ? 'bg-neutral-800 border-neutral-700 text-white placeholder-neutral-500' : 'bg-white border-neutral-300 text-neutral-900 placeholder-neutral-400'} focus:outline-none focus:ring-2 focus:ring-neutral-500 resize-none`}
+                    placeholder="Share your memories, condolences, or thoughts..."
+                    rows={6}
+                    required
+                    maxLength={500}
+                  />
+                  <p className={`text-xs ${darkMode ? 'text-neutral-500' : 'text-neutral-400'} mt-1 text-right`}>
+                    {tributeForm.message.length}/500
+                  </p>
+                </div>
+
+                <div className="flex gap-3 pt-2">
+                  <button
+                    type="button"
+                    onClick={() => setShowTributeForm(false)}
+                    className={`flex-1 px-6 py-3 rounded-xl border-2 ${darkMode ? 'border-neutral-700 text-neutral-300 hover:bg-neutral-800' : 'border-neutral-300 text-neutral-700 hover:bg-neutral-50'} font-semibold transition-all`}
+                  >
+                    Cancel
+                  </button>
+                  <button
+                    type="submit"
+                    disabled={isSubmitting}
+                    className="flex-1 px-6 py-3 bg-gradient-to-r from-neutral-900 to-neutral-800 text-white rounded-xl hover:from-neutral-800 hover:to-neutral-700 transition-all shadow-lg hover:shadow-xl font-semibold disabled:opacity-50 disabled:cursor-not-allowed"
+                  >
+                    {isSubmitting ? 'Sending...' : 'Send Tribute'}
+                  </button>
+                </div>
+              </form>
+            </div>
+          </div>
+        </div>
+      )}
+
+      {/* Tribute Letter Modal */}
+      {selectedTribute && (
+        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={closeTribute}>
+          <div className="relative w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={closeTribute}
+              className="absolute -top-12 right-0 text-white hover:text-neutral-300 transition-colors z-50"
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="relative flex items-center justify-center min-h-[600px]">
+              {/* Closed Envelope - Shows first */}
+              {!envelopeOpened && (
+                <button
+                  onClick={handleEnvelopeClick}
+                  className="envelope-modal-closed cursor-pointer hover:scale-105 transition-transform duration-300"
+                >
+                  <div className="relative">
+                    {/* Envelope Body */}
+                    <div className="relative w-80 h-56 bg-gradient-to-br from-neutral-800 via-neutral-700 to-neutral-900 rounded-lg shadow-2xl border-2 border-neutral-600">
+                      {/* Envelope Flap - Closed */}
+                      <div 
+                        className="absolute top-0 left-0 right-0 bg-gradient-to-br from-neutral-700 via-neutral-600 to-neutral-800 shadow-lg z-10"
+                        style={{ 
+                          height: '140px',
+                          clipPath: 'polygon(0 0, 50% 70%, 100% 0)',
+                          borderBottom: '2px solid rgba(0,0,0,0.3)'
+                        }}
+                      >
+                        {/* Flap shadow */}
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent"></div>
+                      </div>
+
+                      {/* Click to open text */}
+                      <div className="absolute inset-0 flex items-center justify-center z-20">
+                        <div className="bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg border border-white/20">
+                          <p className="text-white text-sm font-semibold">Click to Open</p>
+                        </div>
+                      </div>
+
+                      {/* Envelope details */}
+                      <div className="absolute bottom-4 left-4 right-4 text-white/60 text-xs">
+                        <p className="truncate">From: {selectedTribute.name}</p>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              {/* Opening Animation Container */}
+              {envelopeOpened && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  {/* Envelope that opens and slants to background */}
+                  <div className={`envelope-opening absolute`} style={{ zIndex: 1 }}>
+                    <div className="envelope-body relative">
+                      {/* Envelope Body */}
+                      <div className="relative w-80 h-56 bg-gradient-to-br from-neutral-800 via-neutral-700 to-neutral-900 rounded-lg shadow-2xl border-2 border-neutral-600">
+                        {/* Envelope Flap - Opening */}
+                        <div 
+                          className="envelope-flap absolute top-0 left-0 right-0 bg-gradient-to-br from-neutral-700 via-neutral-600 to-neutral-800 shadow-lg z-10"
+                          style={{ 
+                            height: '140px',
+                            clipPath: 'polygon(0 0, 50% 70%, 100% 0)',
+                            transformOrigin: 'top center'
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent"></div>
+                        </div>
+
+                        {/* Envelope Opening */}
+                        <div className="absolute inset-0 flex items-end justify-center pb-4">
+                          <div className="w-4/5 h-3/4 bg-amber-100 rounded-t-lg border-2 border-amber-200"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  {/* Letter sliding out */}
+                  <div className="letter-sliding-out relative" style={{ zIndex: 2 }}>
+                    <div className="relative bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-100 rounded-xl shadow-2xl overflow-hidden border-4 border-amber-200 w-full max-w-2xl" style={{ minHeight: '500px' }}>
+                      {/* Old Paper Texture */}
+                      <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ 
+                        backgroundImage: `
+                          repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(139, 69, 19, 0.03) 2px, rgba(139, 69, 19, 0.03) 4px),
+                          repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(139, 69, 19, 0.03) 2px, rgba(139, 69, 19, 0.03) 4px),
+                          radial-gradient(circle at 20% 30%, rgba(160, 82, 45, 0.1) 0%, transparent 50%),
+                          radial-gradient(circle at 80% 70%, rgba(139, 69, 19, 0.1) 0%, transparent 50%)
+                        `,
+                        backgroundBlendMode: 'multiply'
+                      }}></div>
+
+                      {/* Coffee Stains */}
+                      <div className="absolute top-10 right-10 w-16 h-16 rounded-full bg-amber-800 opacity-5 blur-sm"></div>
+                      <div className="absolute bottom-20 left-10 w-12 h-12 rounded-full bg-amber-900 opacity-5 blur-sm"></div>
+                      
+                      {/* Letter Header */}
+                      <div className="relative p-8 sm:p-12 border-b-2 border-amber-300/50">
+                        <div className="text-center space-y-3">
+                          {/* Decorative Top Border */}
+                          <div className="flex items-center justify-center gap-2 mb-4">
+                            <div className="h-px w-16 bg-gradient-to-r from-transparent to-amber-600"></div>
+                            <svg className="w-8 h-8 text-amber-700" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                            </svg>
+                            <div className="h-px w-16 bg-gradient-to-l from-transparent to-amber-600"></div>
+                          </div>
+                          
+                          <h3 className="text-3xl font-serif text-amber-950 tracking-wide" style={{ fontFamily: 'Georgia, serif' }}>
+                            A Tribute
+                          </h3>
+                          <p className="text-sm text-amber-800 italic font-serif">
+                            In loving memory of {memorial?.name}
+                          </p>
+                          
+                          {/* Decorative Bottom Border */}
+                          <div className="flex items-center justify-center gap-2 mt-4">
+                            <div className="h-px w-24 bg-gradient-to-r from-transparent via-amber-400 to-transparent"></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      {/* Letter Body */}
+                      <div className="relative p-8 sm:p-12 space-y-8">
+                        <div className="space-y-6">
+                          {/* From Section */}
+                          <div className="flex items-start gap-3 pb-4 border-b border-amber-300/30">
+                            <span className="text-amber-800 font-serif text-lg italic">From:</span>
+                            <span className="text-amber-950 font-semibold text-lg font-serif">{selectedTribute.name}</span>
+                          </div>
+                          
+                          {/* Message Content */}
+                          <div className="space-y-4">
+                            <p className="text-amber-950 leading-relaxed font-serif text-base sm:text-lg whitespace-pre-line indent-8" style={{ 
+                              fontFamily: 'Georgia, serif',
+                              textAlign: 'justify',
+                              lineHeight: '1.8'
+                            }}>
+                              {selectedTribute.message}
+                            </p>
+                          </div>
+                        </div>
+
+                        {/* Signature Line */}
+                        <div className="pt-8 mt-8 border-t border-amber-300/30">
+                          <div className="flex justify-between items-end">
+                            <div className="text-amber-700 italic text-xs font-serif">
+                              With heartfelt condolences
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-amber-700 italic font-serif mb-1">
+                                {new Date(selectedTribute.created_at).toLocaleDateString('en-US', { 
+                                  year: 'numeric', 
+                                  month: 'long', 
+                                  day: 'numeric' 
+                                })}
+                              </p>
+                              <div className="h-px w-32 bg-amber-800/30 ml-auto"></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        {/* Decorative Corner Elements */}
+                        <div className="absolute top-6 left-6 text-amber-400 opacity-30">
+                          <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" opacity="0.3" />
+                            <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" />
+                          </svg>
+                        </div>
+                        <div className="absolute bottom-6 right-6 text-amber-400 opacity-30">
+                          <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" opacity="0.5" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      {/* Vintage Paper Edge Effect */}
+                      <div className="absolute inset-0 pointer-events-none border-2 border-amber-900/10 rounded-xl"></div>
+                      <div className="absolute inset-0 pointer-events-none" style={{
+                        boxShadow: 'inset 0 0 60px rgba(139, 69, 19, 0.1), inset 0 0 20px rgba(160, 82, 45, 0.05)'
+                      }}></div>
+
+                      {/* Wax Seal */}
+                      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 z-30">
+                        <div className="relative">
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-800 via-red-900 to-red-950 shadow-2xl flex items-center justify-center border-4 border-red-950 relative">
+                            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-red-700/30 to-transparent"></div>
+                            <span className="text-red-200 text-xl relative z-10">🕊️</span>
+                            {/* Wax texture */}
+                            <div className="absolute inset-2 rounded-full border border-red-700/50"></div>
+                          </div>
+                          {/* Wax drip effect */}
+                          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-4 h-2 bg-red-950 rounded-b-full opacity-70"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
           </div>
         </div>
       )}
