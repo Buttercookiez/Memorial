@@ -691,7 +691,7 @@ export default function MemorialPage() {
                     >
                       Your browser does not support the video tag.
                     </video>
-                  )}
+)}
                 </div>
               </div>
             )}
@@ -824,7 +824,7 @@ export default function MemorialPage() {
                   </div>
 
                   {tributes.length > 0 ? (
-                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 sm:gap-6 envelopes-container">
+                    <div className="grid grid-cols-4 sm:grid-cols-4 md:grid-cols-5 gap-4 sm:gap-6 envelopes-container">
                       {tributes.map((tribute, index) => {
                         const isBlack = index % 2 === 0;
                         
@@ -834,7 +834,7 @@ export default function MemorialPage() {
                             onClick={() => openTribute(tribute)}
                             className="envelope cursor-pointer flex items-center justify-center"
                           >
-                            <div className={`envelope-icon text-4xl sm:text-5xl ${isBlack ? 'envelope-black' : 'envelope-white'}`}>
+                            <div className={`envelope-icon text-5xl sm:text-6xl ${isBlack ? 'envelope-black' : 'envelope-white'}`}>
                               {isBlack ? '✉' : '✉'}
                             </div>
                           </button>
@@ -1259,6 +1259,8 @@ export default function MemorialPage() {
                       </div>
                     </div>
                   </div>
+
+                  
 
                   <div className="letter-sliding-out relative" style={{ zIndex: 2 }}>
                     <div className="relative bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-100 rounded-xl shadow-2xl overflow-hidden border-4 border-amber-200 w-full max-w-2xl" style={{ minHeight: '500px' }}>
