@@ -22,6 +22,7 @@ export default function MemorialPage() {
   const audioRef = useRef(null);
   const qrRef = useRef(null);
   const userInteractedRef = useRef(false);
+  const musicTabAudioRef = useRef(null);
 
   useEffect(() => {
     const savedDarkMode = localStorage.getItem('memorialDarkMode');
@@ -30,82 +31,101 @@ export default function MemorialPage() {
     }
   }, []);
 
-  // Handle user interaction to start music - Enhanced for mobile
+  // Enhanced user interaction handler for mobile
   useEffect(() => {
-    const handleUserInteraction = () => {
+    const startMusicOnInteraction = async () => {
       if (!userInteractedRef.current && memorial?.music_file && audioRef.current) {
         userInteractedRef.current = true;
         
-        const playMusic = async () => {
-          try {
-            audioRef.current.volume = 1.0; // Set to 100% volume
-            audioRef.current.playbackRate = 1.0;
-            await audioRef.current.play();
-            setMusicStarted(true);
-            console.log('Music started after user interaction');
-          } catch (error) {
-            console.error('Error playing music:', error);
-          }
-        };
-
-        playMusic();
-        
-        // Remove event listeners after first interaction
-        document.removeEventListener('click', handleUserInteraction);
-        document.removeEventListener('touchstart', handleUserInteraction);
-        document.removeEventListener('touchend', handleUserInteraction);
-        document.removeEventListener('touchmove', handleUserInteraction);
-        document.removeEventListener('touchcancel', handleUserInteraction);
-        document.removeEventListener('scroll', handleUserInteraction);
-        document.removeEventListener('wheel', handleUserInteraction);
-        document.removeEventListener('keydown', handleUserInteraction);
-        document.removeEventListener('mousedown', handleUserInteraction);
-        document.removeEventListener('mouseup', handleUserInteraction);
-        document.removeEventListener('mousemove', handleUserInteraction);
+        try {
+          audioRef.current.volume = 1.0;
+          audioRef.current.muted = false;
+          await audioRef.current.play();
+          setMusicStarted(true);
+          console.log('Music started successfully');
+        } catch (error) {
+          console.error('Error playing music:', error);
+          // Retry once after a short delay
+          setTimeout(async () => {
+            try {
+              await audioRef.current.play();
+              setMusicStarted(true);
+            } catch (retryError) {
+              console.error('Retry failed:', retryError);
+            }
+          }, 100);
+        }
       }
     };
 
-    // Add comprehensive event listeners for all types of user interactions
+    // Comprehensive event listeners for all user interactions
     const events = [
-      'click', 'touchstart', 'touchend', 'touchmove', 'touchcancel',
-      'scroll', 'wheel', 'keydown', 'mousedown', 'mouseup', 'mousemove'
+      'click',
+      'touchstart',
+      'touchend',
+      'touchmove',
+      'scroll',
+      'wheel',
+      'keydown',
+      'mousedown',
+      'pointerdown',
+      'gesturestart'
     ];
 
     events.forEach(event => {
-      document.addEventListener(event, handleUserInteraction, { 
-        passive: true, // Important for scroll/touch performance
-        capture: true  // Capture events in capture phase
+      document.addEventListener(event, startMusicOnInteraction, {
+        passive: true,
+        capture: true,
+        once: false // Allow multiple attempts
+      });
+      window.addEventListener(event, startMusicOnInteraction, {
+        passive: true,
+        capture: true,
+        once: false
       });
     });
 
     return () => {
       events.forEach(event => {
-        document.removeEventListener(event, handleUserInteraction, { 
+        document.removeEventListener(event, startMusicOnInteraction, {
           passive: true,
-          capture: true 
+          capture: true
+        });
+        window.removeEventListener(event, startMusicOnInteraction, {
+          passive: true,
+          capture: true
         });
       });
     };
   }, [memorial?.music_file]);
 
-  // Auto-play music when component mounts if music is already started
-  useEffect(() => {
-    if (musicStarted && audioRef.current) {
-      audioRef.current.play().catch(console.error);
-    }
-  }, [musicStarted]);
-
-  // Add visibility change handler to resume playback when tab becomes active
+  // Handle visibility change to resume playback
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && audioRef.current && musicStarted) {
-        audioRef.current.play().catch(console.error);
+        audioRef.current.play().catch(error => {
+          console.error('Error resuming playback:', error);
+        });
       }
     };
 
     document.addEventListener('visibilitychange', handleVisibilityChange);
     return () => {
       document.removeEventListener('visibilitychange', handleVisibilityChange);
+    };
+  }, [musicStarted]);
+
+  // Handle page focus to resume playback
+  useEffect(() => {
+    const handleFocus = () => {
+      if (audioRef.current && musicStarted && audioRef.current.paused) {
+        audioRef.current.play().catch(console.error);
+      }
+    };
+
+    window.addEventListener('focus', handleFocus);
+    return () => {
+      window.removeEventListener('focus', handleFocus);
     };
   }, [musicStarted]);
 
@@ -202,7 +222,6 @@ export default function MemorialPage() {
       const QRCode = (await import('qrcode')).default;
       const url = window.location.href;
       
-      // Generate QR code with website action - Original QR code style
       const qrDataUrl = await QRCode.toDataURL(url, {
         width: 512,
         margin: 2,
@@ -225,38 +244,32 @@ export default function MemorialPage() {
       canvas.width = 600;
       canvas.height = 800;
 
-      // Background gradient
       const gradient = ctx.createLinearGradient(0, 0, 0, canvas.height);
       gradient.addColorStop(0, '#000000');
       gradient.addColorStop(1, '#1a1a1a');
       ctx.fillStyle = gradient;
       ctx.fillRect(0, 0, canvas.width, canvas.height);
 
-      // Border
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 3;
       ctx.strokeRect(20, 20, canvas.width - 40, canvas.height - 40);
 
-      // Title
       ctx.fillStyle = '#ffffff';
       ctx.font = 'bold 48px Arial';
       ctx.textAlign = 'center';
       ctx.fillText('Memorial', canvas.width / 2, 100);
 
-      // Name
       ctx.fillStyle = '#ffffff';
       ctx.font = '32px Arial';
       const name = memorial.name || 'In Loving Memory';
       ctx.fillText(name, canvas.width / 2, 160);
 
-      // Dates
       ctx.fillStyle = '#cccccc';
       ctx.font = '20px Arial';
       const birthDate = formatDate(memorial.birth_date);
       const deathDate = formatDate(memorial.death_date);
       ctx.fillText(`${birthDate} — ${deathDate}`, canvas.width / 2, 200);
 
-      // QR Code with white background
       ctx.fillStyle = '#ffffff';
       const qrSize = 280;
       const qrX = (canvas.width - qrSize) / 2;
@@ -266,12 +279,10 @@ export default function MemorialPage() {
       
       ctx.drawImage(qrImage, qrX, qrY, qrSize, qrSize);
 
-      // Scan instruction
       ctx.fillStyle = '#ffffff';
       ctx.font = '22px Arial';
       ctx.fillText('Scan to View Memorial', canvas.width / 2, 600);
 
-      // Decorative line
       ctx.strokeStyle = '#ffffff';
       ctx.lineWidth = 2;
       ctx.beginPath();
@@ -279,17 +290,14 @@ export default function MemorialPage() {
       ctx.lineTo(450, 630);
       ctx.stroke();
 
-      // Memorial message
       ctx.fillStyle = '#999999';
       ctx.font = 'italic 18px Arial';
       ctx.fillText('Forever in our hearts', canvas.width / 2, 680);
 
-      // Dove icon
       ctx.fillStyle = '#ffffff';
       ctx.font = '36px Arial';
       ctx.fillText('🕊️', canvas.width / 2, 730);
 
-      // Convert to blob and download
       canvas.toBlob((blob) => {
         const url = URL.createObjectURL(blob);
         const link = document.createElement('a');
@@ -431,12 +439,13 @@ export default function MemorialPage() {
 
   return (
     <>
-      {/* Single audio element used for both background and music tab */}
+      {/* Background audio element */}
       {musicUrl && (
         <audio 
           ref={audioRef}
           loop
           preload="auto"
+          playsInline
           src={musicUrl}
           style={{ display: 'none' }}
         />
@@ -514,7 +523,7 @@ export default function MemorialPage() {
             )}
           </div>
 
-          {/* Tab Navigation - Optimized for Mobile */}
+          {/* Tab Navigation */}
           <div className={`border-b ${darkMode ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
             <div className="flex justify-center w-full">
               {tabs.map((tab) => (
@@ -671,27 +680,19 @@ export default function MemorialPage() {
                         </div>
                         
                         <div className="space-y-4">
-                          {/* Use the same audio element but show controls in music tab */}
                           <audio 
+                            ref={musicTabAudioRef}
                             controls 
                             className="w-full"
                             style={{
                               filter: darkMode ? 'invert(1) hue-rotate(180deg)' : 'none'
                             }}
-                            ref={(el) => {
-                              if (el && audioRef.current) {
-                                // Sync the controlled audio element with our background audio
-                                el.src = musicUrl;
-                                el.volume = 1.0; // Set to 100% volume
-                                if (!audioRef.current.paused) {
-                                  el.currentTime = audioRef.current.currentTime;
-                                  el.play().catch(console.error);
-                                }
-                              }
-                            }}
+                            src={musicUrl}
+                            loop
+                            playsInline
                             onPlay={() => {
-                              if (audioRef.current && audioRef.current.paused) {
-                                audioRef.current.currentTime = audioRef.current.currentTime;
+                              if (audioRef.current) {
+                                audioRef.current.currentTime = musicTabAudioRef.current?.currentTime || 0;
                                 audioRef.current.play().catch(console.error);
                               }
                               setMusicStarted(true);
@@ -706,7 +707,11 @@ export default function MemorialPage() {
                                 audioRef.current.currentTime = e.target.currentTime;
                               }
                             }}
-                            loop
+                            onTimeUpdate={(e) => {
+                              if (audioRef.current && Math.abs(audioRef.current.currentTime - e.target.currentTime) > 0.5) {
+                                audioRef.current.currentTime = e.target.currentTime;
+                              }
+                            }}
                           >
                             Your browser does not support the audio element.
                           </audio>
@@ -841,12 +846,11 @@ export default function MemorialPage() {
           .floating-bird {
             position: absolute;
             bottom: 50%;
-            font-size = 1.5rem;
+            font-size: 1.5rem;
             animation: floatUp 2s ease-out forwards;
             pointer-events: none;
           }
 
-          /* Hide scrollbar for mobile navigation */
           .scrollbar-hide {
             -ms-overflow-style: none;
             scrollbar-width: none;
