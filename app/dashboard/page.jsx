@@ -21,7 +21,7 @@ export default function Dashboard() {
   const [uploading, setUploading] = useState(false);
   const [darkMode, setDarkMode] = useState(false);
 
-  // Form state - Initialize with empty values
+  // Form state
   const [formData, setFormData] = useState({
     name: "",
     birth_date: "",
@@ -41,14 +41,18 @@ export default function Dashboard() {
     video_file: null,
     music_file: null,
   });
+  
   const [selectedImage, setSelectedImage] = useState(null);
   const [showModal, setShowModal] = useState(false);
   const [draggedIndex, setDraggedIndex] = useState(null);
-  const [showVideoPreview, setShowVideoPreview] = useState(false);
-  const [showMusicPreview, setShowMusicPreview] = useState(false);
+  
+  // Tribute states
+  const [tributes, setTributes] = useState([]);
+  const [selectedTribute, setSelectedTribute] = useState(null);
+  const [envelopeOpened, setEnvelopeOpened] = useState(false);
+  const [showTributesSection, setShowTributesSection] = useState(false);
 
   useEffect(() => {
-    // Check for saved dark mode preference
     const savedDarkMode = localStorage.getItem('dashboardDarkMode');
     if (savedDarkMode === 'true') {
       setDarkMode(true);
@@ -83,10 +87,28 @@ export default function Dashboard() {
     if (error) {
       console.error("Error fetching memorials:", error);
     } else {
-      console.log("Fetched memorials:", data);
       setMemorials(data || []);
     }
     setLoading(false);
+  };
+
+  const fetchTributes = async (memorialId) => {
+    try {
+      const { data, error } = await supabase
+        .from("tributes")
+        .select("*")
+        .eq("memorial_id", memorialId)
+        .order("created_at", { ascending: false });
+
+      if (error) {
+        console.error("Error fetching tributes:", error);
+        return;
+      }
+
+      setTributes(data || []);
+    } catch (error) {
+      console.error("Unexpected error fetching tributes:", error);
+    }
   };
 
   const handleInputChange = (e) => {
@@ -149,8 +171,6 @@ export default function Dashboard() {
     const fileName = `${Math.random().toString(36).substring(2, 15)}.${fileExt}`;
     const filePath = `${path}/${fileName}`;
 
-    console.log(`Uploading to ${bucket}:`, filePath);
-
     const { error: uploadError } = await supabase.storage
       .from(bucket)
       .upload(filePath, file);
@@ -161,22 +181,15 @@ export default function Dashboard() {
     }
 
     const { data } = supabase.storage.from(bucket).getPublicUrl(filePath);
-    console.log(`Upload successful. Public URL:`, data.publicUrl);
     return data.publicUrl;
   };
 
   const deleteFileFromStorage = async (fileUrl) => {
-    if (!fileUrl) {
-      console.log("No file URL provided for deletion");
-      return;
-    }
+    if (!fileUrl) return;
     
     try {
-      console.log("🔄 Attempting to delete file:", fileUrl);
-      
       let bucket, filePath;
       
-      // Method 1: Parse standard Supabase URL format
       if (fileUrl.includes('supabase.co/storage/v1/object/public/')) {
         const url = new URL(fileUrl);
         const pathParts = url.pathname.split('/');
@@ -187,40 +200,21 @@ export default function Dashboard() {
           filePath = pathParts.slice(publicIndex + 2).join('/');
         }
       }
-      // Method 2: Handle different URL formats
-      else if (fileUrl.includes('/storage/v1/object/public/')) {
-        const parts = fileUrl.split('/storage/v1/object/public/');
-        if (parts.length === 2) {
-          const bucketAndPath = parts[1].split('/');
-          bucket = bucketAndPath[0];
-          filePath = bucketAndPath.slice(1).join('/');
-        }
-      }
-      
-      console.log(`📁 Extracted - Bucket: ${bucket}, FilePath: ${filePath}`);
       
       if (!bucket || !filePath) {
-        console.error("❌ Could not extract bucket or file path from URL");
-        console.log("URL format might be different than expected");
+        console.error("Could not extract bucket or file path from URL");
         return;
       }
       
-      // Delete the file
       const { error } = await supabase.storage
         .from(bucket)
         .remove([filePath]);
       
       if (error) {
-        console.error("❌ Error deleting file from storage:", error);
-        if (error.message.includes('not found')) {
-          console.log("File might have already been deleted or doesn't exist");
-        }
-      } else {
-        console.log("✅ File deleted successfully from storage");
+        console.error("Error deleting file from storage:", error);
       }
     } catch (error) {
-      console.error("❌ Error in deleteFileFromStorage:", error);
-      console.log("Problematic file URL:", fileUrl);
+      console.error("Error in deleteFileFromStorage:", error);
     }
   };
 
@@ -244,6 +238,8 @@ export default function Dashboard() {
     });
     setIsCreating(false);
     setEditingId(null);
+    setTributes([]);
+    setShowTributesSection(false);
   };
 
   const generateQRCode = async (memorialId) => {
@@ -279,14 +275,8 @@ export default function Dashboard() {
       let videoUrl = existingFiles.video_file;
       let musicUrl = existingFiles.music_file;
 
-      console.log("🔄 Starting file uploads...");
-
-      // Upload profile image if new file selected
       if (formData.profile_image) {
-        console.log("📸 Uploading profile image...");
-        // Delete old profile image if exists
         if (existingFiles.profile_image_file) {
-          console.log("🗑️ Deleting old profile image...");
           await deleteFileFromStorage(existingFiles.profile_image_file);
         }
         profileImageUrl = await uploadFile(
@@ -294,27 +284,18 @@ export default function Dashboard() {
           'memorial-images', 
           `${user.id}/profile`
         );
-        console.log("✅ Profile image URL:", profileImageUrl);
       }
 
-      // Upload new gallery images
       if (formData.gallery_images.length > 0) {
-        console.log("🖼️ Uploading gallery images...");
-        const uploadPromises = formData.gallery_images.map((file, index) => {
-          console.log(`📤 Uploading gallery image ${index + 1}:`, file.name);
-          return uploadFile(file, 'memorial-images', `${user.id}/gallery`);
-        });
+        const uploadPromises = formData.gallery_images.map(file =>
+          uploadFile(file, 'memorial-images', `${user.id}/gallery`)
+        );
         const newGalleryUrls = await Promise.all(uploadPromises);
         galleryUrls = [...galleryUrls, ...newGalleryUrls];
-        console.log("✅ All Gallery URLs:", galleryUrls);
       }
 
-      // Upload video if new file selected
       if (formData.video_file) {
-        console.log("🎥 Uploading video...");
-        // Delete old video if exists
         if (existingFiles.video_file) {
-          console.log("🗑️ Deleting old video...");
           await deleteFileFromStorage(existingFiles.video_file);
         }
         videoUrl = await uploadFile(
@@ -322,15 +303,10 @@ export default function Dashboard() {
           'memorial-videos',
           `${user.id}/videos`
         );
-        console.log("✅ Video URL:", videoUrl);
       }
 
-      // Upload music if new file selected
       if (formData.music_file) {
-        console.log("🎵 Uploading music...");
-        // Delete old music if exists
         if (existingFiles.music_file) {
-          console.log("🗑️ Deleting old music...");
           await deleteFileFromStorage(existingFiles.music_file);
         }
         musicUrl = await uploadFile(
@@ -338,10 +314,8 @@ export default function Dashboard() {
           'memorial-audio',
           `${user.id}/audio`
         );
-        console.log("✅ Music URL:", musicUrl);
       }
 
-      // Prepare memorial data
       const memorialData = {
         name: formData.name,
         birth_date: formData.birth_date,
@@ -354,20 +328,15 @@ export default function Dashboard() {
         music_file: musicUrl,
       };
 
-      console.log("💾 Saving memorial data:", memorialData);
-
       if (editingId) {
-        // Update existing memorial
         const { error } = await supabase
           .from("memorials")
           .update(memorialData)
           .eq("id", editingId);
 
         if (error) throw error;
-        console.log("✅ Memorial updated successfully!");
         alert("Memorial updated successfully!");
       } else {
-        // Create new memorial
         const { data: newMemorial, error } = await supabase
           .from("memorials")
           .insert([{ 
@@ -380,10 +349,8 @@ export default function Dashboard() {
 
         if (error) throw error;
 
-        // Generate QR code
         const qrCode = await generateQRCode(newMemorial.id);
         
-        // Update memorial with QR code
         if (qrCode) {
           await supabase
             .from("memorials")
@@ -391,14 +358,13 @@ export default function Dashboard() {
             .eq("id", newMemorial.id);
         }
 
-        console.log("✅ Memorial created successfully!");
         alert("Memorial created successfully!");
       }
 
       await fetchMemorials(user.id);
       resetForm();
     } catch (error) {
-      console.error("❌ Error saving memorial:", error);
+      console.error("Error saving memorial:", error);
       alert("Error saving memorial. Please try again.");
     } finally {
       setSaving(false);
@@ -406,7 +372,7 @@ export default function Dashboard() {
     }
   };
 
-  const handleEdit = (memorial) => {
+  const handleEdit = async (memorial) => {
     setFormData({
       name: memorial.name || "",
       birth_date: memorial.birth_date || "",
@@ -419,7 +385,6 @@ export default function Dashboard() {
       music_file: null,
     });
     
-    // Store existing files so they persist when editing
     setExistingFiles({
       profile_image_file: memorial.profile_image_file,
       gallery_files: memorial.gallery_files || [],
@@ -429,12 +394,15 @@ export default function Dashboard() {
     
     setEditingId(memorial.id);
     setIsCreating(true);
+    
+    // Fetch tributes for this memorial
+    await fetchTributes(memorial.id);
+    setShowTributesSection(true);
   };
 
   const handleDelete = async (id) => {
     if (!confirm("Are you sure you want to delete this memorial?")) return;
 
-    // First get the memorial to delete files from storage
     const { data: memorial } = await supabase
       .from("memorials")
       .select("*")
@@ -442,7 +410,6 @@ export default function Dashboard() {
       .single();
 
     if (memorial) {
-      // Delete all associated files from storage
       if (memorial.profile_image_file) {
         await deleteFileFromStorage(memorial.profile_image_file);
       }
@@ -459,7 +426,6 @@ export default function Dashboard() {
       }
     }
 
-    // Then delete the memorial record
     const { error } = await supabase
       .from("memorials")
       .delete()
@@ -474,6 +440,30 @@ export default function Dashboard() {
     }
   };
 
+  const handleDeleteTribute = async (tributeId) => {
+    if (!confirm("Are you sure you want to delete this tribute?")) return;
+
+    try {
+      const { error } = await supabase
+        .from("tributes")
+        .delete()
+        .eq("id", tributeId);
+
+      if (error) {
+        console.error("Error deleting tribute:", error);
+        alert("Error deleting tribute");
+        return;
+      }
+
+      setTributes(prev => prev.filter(t => t.id !== tributeId));
+      setSelectedTribute(null);
+      alert("Tribute deleted successfully");
+    } catch (error) {
+      console.error("Unexpected error:", error);
+      alert("Error deleting tribute");
+    }
+  };
+
   const handleLogout = async () => {
     await supabase.auth.signOut();
     router.push('/');
@@ -483,7 +473,6 @@ export default function Dashboard() {
     try {
       const url = `${window.location.origin}/memorials/${memorial.id}`;
       
-      // Generate QR code
       const qrDataUrl = await QRCode.toDataURL(url, {
         width: 512,
         margin: 2,
@@ -493,7 +482,6 @@ export default function Dashboard() {
         },
       });
 
-      // Create QR image
       const qrImage = new Image();
       qrImage.src = qrDataUrl;
       
@@ -589,14 +577,12 @@ export default function Dashboard() {
     }
   };
 
-  // Remove gallery image from existing files
   const removeExistingGalleryImage = (index) => {
     const imageToRemove = existingFiles.gallery_files[index];
     setExistingFiles(prev => ({
       ...prev,
       gallery_files: prev.gallery_files.filter((_, i) => i !== index)
     }));
-    // Delete from storage
     deleteFileFromStorage(imageToRemove);
   };
 
@@ -634,6 +620,20 @@ export default function Dashboard() {
     setDraggedIndex(null);
   };
 
+  const openTribute = (tribute) => {
+    setSelectedTribute(tribute);
+    setEnvelopeOpened(false);
+  };
+
+  const closeTribute = () => {
+    setSelectedTribute(null);
+    setEnvelopeOpened(false);
+  };
+
+  const handleEnvelopeClick = () => {
+    setEnvelopeOpened(true);
+  };
+
   if (loading) {
     return (
       <div className={`min-h-screen ${darkMode ? 'bg-neutral-950' : 'bg-gradient-to-br from-neutral-50 to-neutral-100'} flex items-center justify-center`}>
@@ -644,7 +644,6 @@ export default function Dashboard() {
 
   return (
     <div className={`min-h-screen ${darkMode ? 'bg-neutral-950' : 'bg-gradient-to-br from-neutral-50 to-neutral-100'}`}>
-      {/* Dark Mode Toggle Button - Fixed Bottom Right */}
       <button
         onClick={toggleDarkMode}
         className={`fixed bottom-4 right-4 z-50 p-2.5 rounded-lg ${darkMode ? 'bg-white text-black' : 'bg-black text-white'} transition-all hover:scale-105 shadow-lg`}
@@ -661,7 +660,6 @@ export default function Dashboard() {
         )}
       </button>
 
-      {/* Navigation */}
       <nav className={`${darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'} border-b sticky top-0 z-50`}>
         <div className="max-w-7xl mx-auto px-4 sm:px-6 lg:px-8">
           <div className="flex justify-between items-center h-16">
@@ -690,9 +688,7 @@ export default function Dashboard() {
         </div>
       </nav>
 
-      {/* Main Content */}
       <div className="max-w-7xl mx-auto p-4 sm:p-8">
-        {/* Header */}
         <div className="mb-8">
           <h1 className={`text-3xl sm:text-4xl font-light ${darkMode ? 'text-white' : 'text-neutral-900'} mb-2`}>
             Memorial Dashboard
@@ -700,7 +696,6 @@ export default function Dashboard() {
           <p className={`${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`}>Manage your memorial pages</p>
         </div>
 
-        {/* Create Button */}
         {!isCreating && (
           <button
             onClick={() => setIsCreating(true)}
@@ -713,7 +708,6 @@ export default function Dashboard() {
           </button>
         )}
 
-        {/* Create/Edit Form */}
         {isCreating && (
           <div className={`mb-8 ${darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'} rounded-2xl shadow-lg border p-6 sm:p-8`}>
             <h2 className={`text-2xl font-light ${darkMode ? 'text-white' : 'text-neutral-900'} mb-6`}>
@@ -721,7 +715,6 @@ export default function Dashboard() {
             </h2>
 
             <div className="space-y-6">
-              {/* Name */}
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
                   Full Name *
@@ -732,63 +725,10 @@ export default function Dashboard() {
                   value={formData.name}
                   onChange={handleInputChange}
                   className={`w-full px-4 py-3 ${darkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-300 text-neutral-900'} border rounded-xl focus:ring-2 focus:ring-neutral-500 focus:border-transparent outline-none transition-all`}
-                  placeholder="John Doe"
-                  required
-                />
-              </div>
-
-              {/* Dates */}
-              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
-                    Birth Date *
-                  </label>
-                  <input
-                    type="date"
-                    name="birth_date"
-                    value={formData.birth_date}
-                    onChange={handleInputChange}
-                    className={`w-full px-4 py-3 ${darkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-300 text-neutral-900'} border rounded-xl focus:ring-2 focus:ring-neutral-500 focus:border-transparent outline-none transition-all`}
-                    style={{
-                      colorScheme: darkMode ? 'dark' : 'light'
-                    }}
-                    required
-                  />
-                </div>
-                <div>
-                  <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
-                    Death Date *
-                  </label>
-                  <input
-                    type="date"
-                    name="death_date"
-                    value={formData.death_date}
-                    onChange={handleInputChange}
-                    className={`w-full px-4 py-3 ${darkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-300 text-neutral-900'} border rounded-xl focus:ring-2 focus:ring-neutral-500 focus:border-transparent outline-none transition-all`}
-                    style={{
-                      colorScheme: darkMode ? 'dark' : 'light'
-                    }}
-                    required
-                  />
-                </div>
-              </div>
-
-              {/* Cause of Death */}
-              <div>
-                <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
-                  Cause of Death
-                </label>
-                <input
-                  type="text"
-                  name="cause_of_death"
-                  value={formData.cause_of_death}
-                  onChange={handleInputChange}
-                  className={`w-full px-4 py-3 ${darkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-300 text-neutral-900'} border rounded-xl focus:ring-2 focus:ring-neutral-500 focus:border-transparent outline-none transition-all`}
                   placeholder="Optional"
                 />
               </div>
 
-              {/* Biography */}
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
                   Biography / Life Story
@@ -803,13 +743,11 @@ export default function Dashboard() {
                 />
               </div>
 
-              {/* Profile Image Upload */}
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
                   Profile Picture (PNG/JPEG)
                 </label>
                 
-                {/* Show new uploaded image if exists, otherwise show current or upload button */}
                 {formData.profile_image ? (
                   <div>
                     <p className={`text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'} mb-2`}>New Profile Picture (click to change):</p>
@@ -874,7 +812,6 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Gallery Images Upload */}
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
                   Gallery Photos (PNG/JPEG) - Upload Multiple
@@ -893,7 +830,6 @@ export default function Dashboard() {
                   />
                 </label>
                 
-                {/* Existing Gallery Preview */}
                 {existingFiles.gallery_files.length > 0 && (
                   <div className="mt-4">
                     <p className={`text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'} mb-2`}>Current Gallery Images (drag to reorder, click to view):</p>
@@ -924,7 +860,6 @@ export default function Dashboard() {
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
                             </svg>
                           </button>
-                          {/* Drag indicator */}
                           <div className={`absolute bottom-2 left-2 ${darkMode ? 'bg-neutral-800' : 'bg-white'} rounded px-2 py-0.5 opacity-0 group-hover:opacity-100 transition-opacity`}>
                             <svg className={`w-3 h-3 ${darkMode ? 'text-neutral-400' : 'text-neutral-600'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
                               <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M4 8h16M4 16h16" />
@@ -936,7 +871,6 @@ export default function Dashboard() {
                   </div>
                 )}
                 
-                {/* New Gallery Preview */}
                 {formData.gallery_images.length > 0 && (
                   <div className="mt-4">
                     <p className={`text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'} mb-2`}>New Gallery Images to Upload:</p>
@@ -963,13 +897,11 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Video Upload */}
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
                   Memorial Video (MP4, MOV, etc.)
                 </label>
                 
-                {/* Show new uploaded video if exists, otherwise show current or upload button */}
                 {formData.video_file ? (
                   <div>
                     <p className={`text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'} mb-2`}>New Video:</p>
@@ -1064,13 +996,11 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Music Upload */}
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
                   Memorial Music (MP3, WAV, etc.)
                 </label>
                 
-                {/* Show new uploaded music if exists, otherwise show current or upload button */}
                 {formData.music_file ? (
                   <div>
                     <p className={`text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'} mb-2`}>New Music:</p>
@@ -1165,7 +1095,33 @@ export default function Dashboard() {
                 )}
               </div>
 
-              {/* Action Buttons */}
+              {showTributesSection && tributes.length > 0 && (
+                <div className={`pt-6 border-t ${darkMode ? 'border-neutral-800' : 'border-neutral-200'}`}>
+                  <div className="flex items-center justify-between mb-4">
+                    <h3 className={`text-lg font-medium ${darkMode ? 'text-white' : 'text-neutral-900'}`}>
+                      Tributes ({tributes.length})
+                    </h3>
+                  </div>
+                  <div className="grid grid-cols-4 sm:grid-cols-6 md:grid-cols-8 gap-4">
+                    {tributes.map((tribute, index) => {
+                      const isBlack = index % 2 === 0;
+                      
+                      return (
+                        <button
+                          key={tribute.id}
+                          onClick={() => openTribute(tribute)}
+                          className="envelope cursor-pointer flex items-center justify-center relative"
+                        >
+                          <div className={`envelope-icon text-3xl sm:text-4xl ${isBlack ? 'envelope-black' : 'envelope-white'}`}>
+                            {isBlack ? '✉' : '✉'}
+                          </div>
+                        </button>
+                      );
+                    })}
+                  </div>
+                </div>
+              )}
+
               <div className="flex gap-4 pt-4">
                 <button
                   onClick={handleSave}
@@ -1186,7 +1142,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Memorials Grid */}
         {!isCreating && (
           <div className="grid grid-cols-1 md:grid-cols-2 lg:grid-cols-3 gap-6">
             {memorials.map((memorial) => (
@@ -1194,7 +1149,6 @@ export default function Dashboard() {
                 key={memorial.id}
                 className={`${darkMode ? 'bg-neutral-900 border-neutral-800' : 'bg-white border-neutral-200'} rounded-2xl shadow-lg border overflow-hidden hover:shadow-xl transition-all`}
               >
-                {/* Memorial Card Header */}
                 <div className={`relative h-48 ${darkMode ? 'bg-gradient-to-br from-neutral-900 to-neutral-950' : 'bg-gradient-to-br from-neutral-800 to-neutral-900'}`}>
                   {memorial.profile_image_file && (
                     <img
@@ -1217,7 +1171,6 @@ export default function Dashboard() {
                   </div>
                 </div>
 
-                {/* Memorial Card Content */}
                 <div className="p-6">
                   <div className={`flex items-center justify-between text-sm ${darkMode ? 'text-neutral-400' : 'text-neutral-600'} mb-4`}>
                     <span>{new Date(memorial.birth_date).getFullYear()}</span>
@@ -1225,7 +1178,6 @@ export default function Dashboard() {
                     <span>{new Date(memorial.death_date).getFullYear()}</span>
                   </div>
 
-                  {/* Media Indicators - Black and White */}
                   <div className="flex justify-center gap-2 mb-4">
                     {memorial.profile_image_file && (
                       <span className={`text-xs ${darkMode ? 'bg-neutral-600 text-white' : 'bg-neutral-600 text-white'} px-2 py-1 rounded-full`}>Photo</span>
@@ -1251,7 +1203,6 @@ export default function Dashboard() {
                     </div>
                   )}
 
-                  {/* Action Buttons */}
                   <div className="space-y-2">
                     <Link
                       href={`/memorials/${memorial.id}`}
@@ -1289,7 +1240,6 @@ export default function Dashboard() {
           </div>
         )}
 
-        {/* Empty State */}
         {memorials.length === 0 && !isCreating && (
           <div className="text-center py-20">
             <svg className={`w-16 h-16 mx-auto mb-4 ${darkMode ? 'text-neutral-700' : 'text-neutral-300'}`} fill="none" stroke="currentColor" viewBox="0 0 24 24">
@@ -1301,7 +1251,6 @@ export default function Dashboard() {
         )}
       </div>
 
-      {/* Gallery Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4" onClick={closeModal}>
           <div className="relative max-w-4xl max-h-full w-full" onClick={(e) => e.stopPropagation()}>
@@ -1322,6 +1271,282 @@ export default function Dashboard() {
           </div>
         </div>
       )}
+
+      {selectedTribute && (
+        <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={closeTribute}>
+          <div className="relative w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
+            <button
+              onClick={closeTribute}
+              className="absolute -top-12 right-0 text-white hover:text-neutral-300 transition-colors z-50"
+            >
+              <svg className="w-8 h-8" fill="none" stroke="currentColor" viewBox="0 0 24 24">
+                <path strokeLinecap="round" strokeLinejoin="round" strokeWidth={2} d="M6 18L18 6M6 6l12 12" />
+              </svg>
+            </button>
+
+            <div className="relative flex items-center justify-center min-h-[600px]">
+              {!envelopeOpened && (
+                <button
+                  onClick={handleEnvelopeClick}
+                  className="envelope-modal-closed cursor-pointer hover:scale-105 transition-transform duration-300"
+                >
+                  <div className="relative">
+                    <div className="relative w-80 h-56 bg-gradient-to-br from-neutral-800 via-neutral-700 to-neutral-900 rounded-lg shadow-2xl border-2 border-neutral-600">
+                      <div 
+                        className="absolute top-0 left-0 right-0 bg-gradient-to-br from-neutral-700 via-neutral-600 to-neutral-800 shadow-lg z-10"
+                        style={{ 
+                          height: '140px',
+                          clipPath: 'polygon(0 0, 50% 70%, 100% 0)',
+                          borderBottom: '2px solid rgba(0,0,0,0.3)'
+                        }}
+                      >
+                        <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent"></div>
+                      </div>
+
+                      <div className="absolute inset-0 flex items-center justify-center z-20">
+                        <div className="bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg border border-white/20">
+                          <p className="text-white text-sm font-semibold">Click to Open</p>
+                        </div>
+                      </div>
+
+                      <div className="absolute bottom-4 left-4 right-4 text-white/60 text-xs">
+                        <p className="truncate">From: {selectedTribute.name}</p>
+                      </div>
+                    </div>
+                  </div>
+                </button>
+              )}
+
+              {envelopeOpened && (
+                <div className="absolute inset-0 flex items-center justify-center">
+                  <div className={`envelope-opening absolute`} style={{ zIndex: 1 }}>
+                    <div className="envelope-body relative">
+                      <div className="relative w-80 h-56 bg-gradient-to-br from-neutral-800 via-neutral-700 to-neutral-900 rounded-lg shadow-2xl border-2 border-neutral-600">
+                        <div 
+                          className="envelope-flap absolute top-0 left-0 right-0 bg-gradient-to-br from-neutral-700 via-neutral-600 to-neutral-800 shadow-lg z-10"
+                          style={{ 
+                            height: '140px',
+                            clipPath: 'polygon(0 0, 50% 70%, 100% 0)',
+                            transformOrigin: 'top center'
+                          }}
+                        >
+                          <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent"></div>
+                        </div>
+
+                        <div className="absolute inset-0 flex items-end justify-center pb-4">
+                          <div className="w-4/5 h-3/4 bg-amber-100 rounded-t-lg border-2 border-amber-200"></div>
+                        </div>
+                      </div>
+                    </div>
+                  </div>
+
+                  <div className="letter-sliding-out relative" style={{ zIndex: 2 }}>
+                    <div className="relative bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-100 rounded-xl shadow-2xl overflow-hidden border-4 border-amber-200 w-full max-w-2xl" style={{ minHeight: '500px' }}>
+                      <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ 
+                        backgroundImage: `
+                          repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(139, 69, 19, 0.03) 2px, rgba(139, 69, 19, 0.03) 4px),
+                          repeating-linear-gradient(90deg, transparent, transparent 2px, rgba(139, 69, 19, 0.03) 2px, rgba(139, 69, 19, 0.03) 4px),
+                          radial-gradient(circle at 20% 30%, rgba(160, 82, 45, 0.1) 0%, transparent 50%),
+                          radial-gradient(circle at 80% 70%, rgba(139, 69, 19, 0.1) 0%, transparent 50%)
+                        `,
+                        backgroundBlendMode: 'multiply'
+                      }}></div>
+
+                      <div className="absolute top-10 right-10 w-16 h-16 rounded-full bg-amber-800 opacity-5 blur-sm"></div>
+                      <div className="absolute bottom-20 left-10 w-12 h-12 rounded-full bg-amber-900 opacity-5 blur-sm"></div>
+                      
+                      <div className="relative p-8 sm:p-12 border-b-2 border-amber-300/50">
+                        <div className="text-center space-y-3">
+                          <div className="flex items-center justify-center gap-2 mb-4">
+                            <div className="h-px w-16 bg-gradient-to-r from-transparent to-amber-600"></div>
+                            <svg className="w-8 h-8 text-amber-700" fill="currentColor" viewBox="0 0 24 24">
+                              <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" />
+                            </svg>
+                            <div className="h-px w-16 bg-gradient-to-l from-transparent to-amber-600"></div>
+                          </div>
+                          
+                          <h3 className="text-3xl font-serif text-amber-950 tracking-wide" style={{ fontFamily: 'Georgia, serif' }}>
+                            A Tribute
+                          </h3>
+                          <p className="text-sm text-amber-800 italic font-serif">
+                            In loving memory
+                          </p>
+                          
+                          <div className="flex items-center justify-center gap-2 mt-4">
+                            <div className="h-px w-24 bg-gradient-to-r from-transparent via-amber-400 to-transparent"></div>
+                          </div>
+                        </div>
+                      </div>
+
+                      <div className="relative p-8 sm:p-12 space-y-8">
+                        <div className="space-y-6">
+                          <div className="flex items-start gap-3 pb-4 border-b border-amber-300/30">
+                            <span className="text-amber-800 font-serif text-lg italic">From:</span>
+                            <span className="text-amber-950 font-semibold text-lg font-serif">{selectedTribute.name}</span>
+                          </div>
+                          
+                          <div className="space-y-4">
+                            <p className="text-amber-950 leading-relaxed font-serif text-base sm:text-lg whitespace-pre-wrap break-words indent-8" style={{ 
+                              fontFamily: 'Georgia, serif',
+                              textAlign: 'justify',
+                              lineHeight: '1.8',
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word',
+                              hyphens: 'auto'
+                            }}>
+                              {selectedTribute.message}
+                            </p>
+                          </div>
+                        </div>
+
+                        <div className="pt-8 mt-8 border-t border-amber-300/30">
+                          <div className="flex justify-between items-end">
+                            <div className="text-amber-700 italic text-xs font-serif">
+                              With heartfelt condolences
+                            </div>
+                            <div className="text-right">
+                              <p className="text-xs text-amber-700 italic font-serif mb-1">
+                                {new Date(selectedTribute.created_at).toLocaleDateString('en-US', { 
+                                  year: 'numeric', 
+                                  month: 'long', 
+                                  day: 'numeric' 
+                                })}
+                              </p>
+                              <div className="h-px w-32 bg-amber-800/30 ml-auto"></div>
+                            </div>
+                          </div>
+                        </div>
+
+                        <div className="absolute top-6 left-6 text-amber-400 opacity-30">
+                          <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" opacity="0.3" />
+                            <path d="M12 6c-3.31 0-6 2.69-6 6s2.69 6 6 6 6-2.69 6-6-2.69-6-6-6zm0 10c-2.21 0-4-1.79-4-4s1.79-4 4-4 4 1.79 4 4-1.79 4-4 4z" />
+                          </svg>
+                        </div>
+                        <div className="absolute bottom-6 right-6 text-amber-400 opacity-30">
+                          <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
+                            <path d="M12 21.35l-1.45-1.32C5.4 15.36 2 12.28 2 8.5 2 5.42 4.42 3 7.5 3c1.74 0 3.41.81 4.5 2.09C13.09 3.81 14.76 3 16.5 3 19.58 3 22 5.42 22 8.5c0 3.78-3.4 6.86-8.55 11.54L12 21.35z" opacity="0.5" />
+                          </svg>
+                        </div>
+                      </div>
+
+                      <div className="absolute inset-0 pointer-events-none border-2 border-amber-900/10 rounded-xl"></div>
+                      <div className="absolute inset-0 pointer-events-none" style={{
+                        boxShadow: 'inset 0 0 60px rgba(139, 69, 19, 0.1), inset 0 0 20px rgba(160, 82, 45, 0.05)'
+                      }}></div>
+
+                      <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 z-30">
+                        <div className="relative">
+                          <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-800 via-red-900 to-red-950 shadow-2xl flex items-center justify-center border-4 border-red-950 relative">
+                            <div className="absolute inset-0 rounded-full bg-gradient-to-br from-red-700/30 to-transparent"></div>
+                            <span className="text-red-200 text-xl relative z-10">🕊️</span>
+                            <div className="absolute inset-2 rounded-full border border-red-700/50"></div>
+                          </div>
+                          <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-4 h-2 bg-red-950 rounded-b-full opacity-70"></div>
+                        </div>
+                      </div>
+
+                      <button
+                        onClick={() => handleDeleteTribute(selectedTribute.id)}
+                        className="absolute top-4 right-4 bg-red-600 hover:bg-red-700 text-white px-3 py-1.5 rounded-lg text-xs font-semibold transition-all shadow-md z-40"
+                      >
+                        Delete
+                      </button>
+                    </div>
+                  </div>
+                </div>
+              )}
+            </div>
+          </div>
+        </div>
+      )}
+
+      <style jsx global>{`
+        .envelope {
+          filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
+          transition: transform 0.3s ease;
+        }
+
+        .envelope:hover {
+          transform: rotate(-5deg);
+        }
+
+        .envelope-icon {
+          filter: grayscale(100%) contrast(1.2);
+        }
+
+        .envelope-black .envelope-icon {
+          filter: grayscale(100%) brightness(0.4) contrast(1.5);
+        }
+
+        .envelope-white .envelope-icon {
+          filter: ${darkMode ? 'grayscale(100%) brightness(1.3) contrast(1.2)' : 'grayscale(100%) brightness(2.5) contrast(1.5)'};
+        }
+
+        @keyframes envelopeFlapOpen {
+          0% {
+            transform: perspective(1000px) rotateX(0deg);
+          }
+          100% {
+            transform: perspective(1000px) rotateX(-180deg);
+          }
+        }
+
+        @keyframes envelopeSlide {
+          0% {
+            transform: rotate(0deg) scale(1) translateY(0);
+            opacity: 1;
+          }
+          100% {
+            transform: rotate(-8deg) scale(0.65) translateY(100px) translateX(-50px);
+            opacity: 0.6;
+          }
+        }
+
+        @keyframes letterSlideUp {
+          0% {
+            transform: translateY(120%) scale(0.9);
+            opacity: 0;
+          }
+          60% {
+            transform: translateY(-10px) scale(1.02);
+            opacity: 1;
+          }
+          100% {
+            transform: translateY(0) scale(1);
+            opacity: 1;
+          }
+        }
+
+        @keyframes fadeInScale {
+          0% {
+            transform: scale(0.9);
+            opacity: 0;
+          }
+          100% {
+            transform: scale(1);
+            opacity: 1;
+          }
+        }
+
+        .envelope-modal-closed {
+          animation: fadeInScale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .envelope-opening .envelope-flap {
+          animation: envelopeFlapOpen 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+          transform-origin: top center;
+        }
+
+        .envelope-opening .envelope-body {
+          animation: envelopeSlide 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
+        }
+
+        .letter-sliding-out {
+          animation: letterSlideUp 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s forwards;
+          opacity: 0;
+        }
+      `}</style>
     </div>
   );
 }

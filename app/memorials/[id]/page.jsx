@@ -51,7 +51,6 @@ export default function MemorialPage() {
           console.log('Music started successfully');
         } catch (error) {
           console.error('Error playing music:', error);
-          // Retry once after a short delay
           setTimeout(async () => {
             try {
               await audioRef.current.play();
@@ -64,7 +63,6 @@ export default function MemorialPage() {
       }
     };
 
-    // Comprehensive event listeners for all user interactions
     const events = [
       'click',
       'touchstart',
@@ -82,7 +80,7 @@ export default function MemorialPage() {
       document.addEventListener(event, startMusicOnInteraction, {
         passive: true,
         capture: true,
-        once: false // Allow multiple attempts
+        once: false
       });
       window.addEventListener(event, startMusicOnInteraction, {
         passive: true,
@@ -105,7 +103,6 @@ export default function MemorialPage() {
     };
   }, [memorial?.music_file]);
 
-  // Handle visibility change to resume playback
   useEffect(() => {
     const handleVisibilityChange = () => {
       if (document.visibilityState === 'visible' && audioRef.current && musicStarted) {
@@ -121,7 +118,6 @@ export default function MemorialPage() {
     };
   }, [musicStarted]);
 
-  // Handle page focus to resume playback
   useEffect(() => {
     const handleFocus = () => {
       if (audioRef.current && musicStarted && audioRef.current.paused) {
@@ -165,7 +161,6 @@ export default function MemorialPage() {
     if (id) fetchMemorial();
   }, [id]);
 
-  // Fetch tributes
   useEffect(() => {
     async function fetchTributes() {
       try {
@@ -410,19 +405,6 @@ export default function MemorialPage() {
         setTributes(prev => [data[0], ...prev]);
         setTributeForm({ name: '', message: '' });
         setShowTributeForm(false);
-        
-        // Trigger envelope scatter animation
-        const container = document.querySelector('.envelopes-container');
-        if (container) {
-          const envelope = document.createElement('div');
-          envelope.className = 'new-envelope';
-          envelope.style.left = `${Math.random() * 100}%`;
-          envelope.style.top = `${Math.random() * 100}%`;
-          envelope.textContent = Math.random() > 0.5 ? '✉️' : '📧';
-          container.appendChild(envelope);
-          
-          setTimeout(() => envelope.remove(), 2000);
-        }
       }
     } catch (error) {
       console.error("Unexpected error:", error);
@@ -534,7 +516,6 @@ export default function MemorialPage() {
 
   return (
     <>
-      {/* Background audio element */}
       {musicUrl && (
         <audio 
           ref={audioRef}
@@ -565,7 +546,6 @@ export default function MemorialPage() {
 
         <div className={`w-full max-w-2xl ${darkMode ? 'bg-neutral-900 shadow-2xl shadow-black/50' : 'bg-white shadow-lg'} rounded-2xl sm:rounded-3xl ${darkMode ? 'border border-neutral-800' : 'border border-neutral-200'} overflow-hidden`}>
           
-          {/* Header Section */}
           <div className={`relative ${darkMode ? 'bg-gradient-to-br from-neutral-950 to-neutral-900' : 'bg-gradient-to-br from-neutral-800 to-neutral-900'} p-4 sm:p-8 pb-4 sm:pb-6`}>
             {profileImageUrl ? (
               <div className="flex justify-center mb-4 sm:mb-6">
@@ -618,7 +598,6 @@ export default function MemorialPage() {
             )}
           </div>
 
-          {/* Tab Navigation */}
           <div className={`border-b ${darkMode ? 'border-neutral-800 bg-neutral-900' : 'border-neutral-200 bg-white'}`}>
             <div className="flex justify-center w-full">
               {tabs.map((tab) => (
@@ -645,7 +624,6 @@ export default function MemorialPage() {
             </div>
           </div>
 
-          {/* Tab Content */}
           <div className={`p-4 sm:p-8 min-h-[300px] ${darkMode ? 'bg-neutral-900' : 'bg-white'}`}>
             {activeTab === "bio" && (
               <div className="space-y-6 animate-fadeIn">
@@ -833,7 +811,6 @@ export default function MemorialPage() {
             {activeTab === "tributes" && (
               <div className="animate-fadeIn">
                 <div className="space-y-6">
-                  {/* Add Tribute Button */}
                   <div className="text-center">
                     <button
                       onClick={() => setShowTributeForm(true)}
@@ -846,29 +823,19 @@ export default function MemorialPage() {
                     </button>
                   </div>
 
-                  {/* Tributes Display */}
                   {tributes.length > 0 ? (
-                    <div className="relative min-h-[400px] envelopes-container">
+                    <div className="grid grid-cols-3 sm:grid-cols-4 md:grid-cols-5 gap-4 sm:gap-6 envelopes-container">
                       {tributes.map((tribute, index) => {
                         const isBlack = index % 2 === 0;
-                        const rotation = (Math.random() - 0.5) * 30;
-                        const xPos = (index % 5) * 18 + Math.random() * 12;
-                        const yPos = Math.floor(index / 5) * 110 + Math.random() * 30;
                         
                         return (
                           <button
                             key={tribute.id}
                             onClick={() => openTribute(tribute)}
-                            className={`absolute envelope ${isBlack ? 'envelope-black' : 'envelope-white'} cursor-pointer transition-all duration-300`}
-                            style={{
-                              left: `${xPos}%`,
-                              top: `${yPos}px`,
-                              transform: `rotate(${rotation}deg)`,
-                              zIndex: tributes.length - index
-                            }}
+                            className="envelope cursor-pointer flex items-center justify-center"
                           >
-                            <div className="envelope-icon text-5xl">
-                              {isBlack ? '✉️' : '📧'}
+                            <div className={`envelope-icon text-4xl sm:text-5xl ${isBlack ? 'envelope-black' : 'envelope-white'}`}>
+                              {isBlack ? '✉' : '✉'}
                             </div>
                           </button>
                         );
@@ -890,10 +857,8 @@ export default function MemorialPage() {
             )}
           </div>
 
-          {/* QR Code and Share Section */}
           <div className={`p-4 sm:p-6 border-t ${darkMode ? 'border-neutral-800 bg-neutral-950' : 'border-neutral-200 bg-neutral-50'}`}>
             <div className="flex flex-col sm:flex-row items-center justify-center gap-6 sm:gap-8">
-              {/* QR Code */}
               <div className="flex flex-col items-center gap-3">
                 <p className="text-xs text-neutral-500 font-medium tracking-wide uppercase">
                   Share Memorial
@@ -903,7 +868,6 @@ export default function MemorialPage() {
                 </div>
               </div>
 
-              {/* Share Button, Bird Counter, and Download Button */}
               <div className="flex flex-col items-center gap-3 w-full sm:w-auto">
                 <button
                   onClick={handleShare}
@@ -1001,26 +965,16 @@ export default function MemorialPage() {
           }
 
           .envelope {
-            transition: all 0.4s cubic-bezier(0.68, -0.55, 0.265, 1.55);
-            filter: drop-shadow(3px 3px 6px rgba(0, 0, 0, 0.3));
+            filter: drop-shadow(2px 2px 4px rgba(0, 0, 0, 0.2));
+            transition: transform 0.3s ease;
           }
 
           .envelope:hover {
-            filter: drop-shadow(6px 6px 12px rgba(0, 0, 0, 0.4)) brightness(1.1);
-            transform: scale(1.15) !important;
-          }
-
-          .envelope:active {
-            transform: scale(0.95) !important;
+            transform: rotate(-5deg);
           }
 
           .envelope-icon {
             filter: grayscale(100%) contrast(1.2);
-            transition: filter 0.3s ease;
-          }
-
-          .envelope:hover .envelope-icon {
-            filter: grayscale(80%) contrast(1.3);
           }
 
           .envelope-black .envelope-icon {
@@ -1028,34 +982,10 @@ export default function MemorialPage() {
           }
 
           .envelope-white .envelope-icon {
-            filter: grayscale(100%) brightness(1.3) contrast(1.2);
+            filter: ${darkMode ? 'grayscale(100%) brightness(1.3) contrast(1.2)' : 'grayscale(100%) brightness(2.5) contrast(1.5)'};
           }
 
-          @keyframes envelopeScatter {
-            0% {
-              opacity: 0;
-              transform: scale(0) rotate(0deg) translateY(-50px);
-            }
-            50% {
-              opacity: 1;
-              transform: scale(1.2) rotate(180deg) translateY(0px);
-            }
-            100% {
-              opacity: 1;
-              transform: scale(1) rotate(360deg) translateY(0px);
-            }
-          }
-
-          .new-envelope {
-            position: absolute;
-            font-size: 3rem;
-            animation: envelopeScatter 2.5s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
-            pointer-events: none;
-            z-index: 1000;
-            filter: grayscale(100%) contrast(1.3);
-          }
-
-          @keyframes envelopeOpen {
+          @keyframes envelopeFlapOpen {
             0% {
               transform: perspective(1000px) rotateX(0deg);
             }
@@ -1064,33 +994,35 @@ export default function MemorialPage() {
             }
           }
 
-          @keyframes envelopeSlant {
+          @keyframes envelopeSlide {
             0% {
-              transform: rotate(0deg) scale(1);
+              transform: rotate(0deg) scale(1) translateY(0);
+              opacity: 1;
             }
             100% {
-              transform: rotate(-15deg) scale(0.7) translateY(50px);
+              transform: rotate(-8deg) scale(0.65) translateY(100px) translateX(-50px);
+              opacity: 0.6;
             }
           }
 
-          @keyframes letterSlideOut {
+          @keyframes letterSlideUp {
             0% {
-              transform: translateY(100%);
+              transform: translateY(120%) scale(0.9);
               opacity: 0;
             }
-            50% {
-              transform: translateY(-20px);
-              opacity: 0.8;
+            60% {
+              transform: translateY(-10px) scale(1.02);
+              opacity: 1;
             }
             100% {
-              transform: translateY(0);
+              transform: translateY(0) scale(1);
               opacity: 1;
             }
           }
 
           @keyframes fadeInScale {
             0% {
-              transform: scale(0.8);
+              transform: scale(0.9);
               opacity: 0;
             }
             100% {
@@ -1100,26 +1032,25 @@ export default function MemorialPage() {
           }
 
           .envelope-modal-closed {
-            animation: fadeInScale 0.3s ease-out forwards;
+            animation: fadeInScale 0.4s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
           }
 
           .envelope-opening .envelope-flap {
-            animation: envelopeOpen 0.8s cubic-bezier(0.68, -0.55, 0.265, 1.55) forwards;
+            animation: envelopeFlapOpen 1s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
             transform-origin: top center;
           }
 
           .envelope-opening .envelope-body {
-            animation: envelopeSlant 0.8s ease-out forwards;
+            animation: envelopeSlide 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) forwards;
           }
 
           .letter-sliding-out {
-            animation: letterSlideOut 1s cubic-bezier(0.68, -0.55, 0.265, 1.55) 0.5s forwards;
+            animation: letterSlideUp 1.2s cubic-bezier(0.34, 1.56, 0.64, 1) 0.6s forwards;
             opacity: 0;
           }
         `}</style>
       </div>
 
-      {/* Gallery Modal */}
       {showModal && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className="relative max-w-4xl max-h-full w-full">
@@ -1168,7 +1099,6 @@ export default function MemorialPage() {
         </div>
       )}
 
-      {/* Tribute Form Modal */}
       {showTributeForm && (
         <div className="fixed inset-0 bg-black bg-opacity-90 flex items-center justify-center z-50 p-4">
           <div className={`relative max-w-lg w-full ${darkMode ? 'bg-neutral-900 border-neutral-700' : 'bg-white border-neutral-200'} rounded-2xl border-2 shadow-2xl`}>
@@ -1218,16 +1148,26 @@ export default function MemorialPage() {
                   </label>
                   <textarea
                     value={tributeForm.message}
-                    onChange={(e) => setTributeForm(prev => ({ ...prev, message: e.target.value }))}
+                    onChange={(e) => {
+                      const lines = e.target.value.split('\n');
+                      if (lines.length <= 10) {
+                        setTributeForm(prev => ({ ...prev, message: e.target.value }));
+                      }
+                    }}
                     className={`w-full px-4 py-3 rounded-xl border ${darkMode ? 'bg-neutral-800 border-neutral-700 text-white placeholder-neutral-500' : 'bg-white border-neutral-300 text-neutral-900 placeholder-neutral-400'} focus:outline-none focus:ring-2 focus:ring-neutral-500 resize-none`}
                     placeholder="Share your memories, condolences, or thoughts..."
                     rows={6}
                     required
                     maxLength={500}
                   />
-                  <p className={`text-xs ${darkMode ? 'text-neutral-500' : 'text-neutral-400'} mt-1 text-right`}>
-                    {tributeForm.message.length}/500
-                  </p>
+                  <div className="flex justify-between items-center mt-1">
+                    <p className={`text-xs ${darkMode ? 'text-neutral-500' : 'text-neutral-400'}`}>
+                      {tributeForm.message.split('\n').length}/10 lines
+                    </p>
+                    <p className={`text-xs ${darkMode ? 'text-neutral-500' : 'text-neutral-400'}`}>
+                      {tributeForm.message.length}/500 characters
+                    </p>
+                  </div>
                 </div>
 
                 <div className="flex gap-3 pt-2">
@@ -1252,7 +1192,6 @@ export default function MemorialPage() {
         </div>
       )}
 
-      {/* Tribute Letter Modal */}
       {selectedTribute && (
         <div className="fixed inset-0 bg-black bg-opacity-95 flex items-center justify-center z-50 p-4 backdrop-blur-sm" onClick={closeTribute}>
           <div className="relative w-full max-w-2xl" onClick={(e) => e.stopPropagation()}>
@@ -1266,16 +1205,13 @@ export default function MemorialPage() {
             </button>
 
             <div className="relative flex items-center justify-center min-h-[600px]">
-              {/* Closed Envelope - Shows first */}
               {!envelopeOpened && (
                 <button
                   onClick={handleEnvelopeClick}
                   className="envelope-modal-closed cursor-pointer hover:scale-105 transition-transform duration-300"
                 >
                   <div className="relative">
-                    {/* Envelope Body */}
                     <div className="relative w-80 h-56 bg-gradient-to-br from-neutral-800 via-neutral-700 to-neutral-900 rounded-lg shadow-2xl border-2 border-neutral-600">
-                      {/* Envelope Flap - Closed */}
                       <div 
                         className="absolute top-0 left-0 right-0 bg-gradient-to-br from-neutral-700 via-neutral-600 to-neutral-800 shadow-lg z-10"
                         style={{ 
@@ -1284,18 +1220,15 @@ export default function MemorialPage() {
                           borderBottom: '2px solid rgba(0,0,0,0.3)'
                         }}
                       >
-                        {/* Flap shadow */}
                         <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent"></div>
                       </div>
 
-                      {/* Click to open text */}
                       <div className="absolute inset-0 flex items-center justify-center z-20">
                         <div className="bg-black/50 backdrop-blur-sm px-6 py-3 rounded-lg border border-white/20">
                           <p className="text-white text-sm font-semibold">Click to Open</p>
                         </div>
                       </div>
 
-                      {/* Envelope details */}
                       <div className="absolute bottom-4 left-4 right-4 text-white/60 text-xs">
                         <p className="truncate">From: {selectedTribute.name}</p>
                       </div>
@@ -1304,15 +1237,11 @@ export default function MemorialPage() {
                 </button>
               )}
 
-              {/* Opening Animation Container */}
               {envelopeOpened && (
                 <div className="absolute inset-0 flex items-center justify-center">
-                  {/* Envelope that opens and slants to background */}
                   <div className={`envelope-opening absolute`} style={{ zIndex: 1 }}>
                     <div className="envelope-body relative">
-                      {/* Envelope Body */}
                       <div className="relative w-80 h-56 bg-gradient-to-br from-neutral-800 via-neutral-700 to-neutral-900 rounded-lg shadow-2xl border-2 border-neutral-600">
-                        {/* Envelope Flap - Opening */}
                         <div 
                           className="envelope-flap absolute top-0 left-0 right-0 bg-gradient-to-br from-neutral-700 via-neutral-600 to-neutral-800 shadow-lg z-10"
                           style={{ 
@@ -1324,7 +1253,6 @@ export default function MemorialPage() {
                           <div className="absolute inset-0 bg-gradient-to-b from-black/20 to-transparent"></div>
                         </div>
 
-                        {/* Envelope Opening */}
                         <div className="absolute inset-0 flex items-end justify-center pb-4">
                           <div className="w-4/5 h-3/4 bg-amber-100 rounded-t-lg border-2 border-amber-200"></div>
                         </div>
@@ -1332,10 +1260,8 @@ export default function MemorialPage() {
                     </div>
                   </div>
 
-                  {/* Letter sliding out */}
                   <div className="letter-sliding-out relative" style={{ zIndex: 2 }}>
                     <div className="relative bg-gradient-to-br from-amber-50 via-yellow-50 to-amber-100 rounded-xl shadow-2xl overflow-hidden border-4 border-amber-200 w-full max-w-2xl" style={{ minHeight: '500px' }}>
-                      {/* Old Paper Texture */}
                       <div className="absolute inset-0 opacity-20 pointer-events-none" style={{ 
                         backgroundImage: `
                           repeating-linear-gradient(0deg, transparent, transparent 2px, rgba(139, 69, 19, 0.03) 2px, rgba(139, 69, 19, 0.03) 4px),
@@ -1346,14 +1272,11 @@ export default function MemorialPage() {
                         backgroundBlendMode: 'multiply'
                       }}></div>
 
-                      {/* Coffee Stains */}
                       <div className="absolute top-10 right-10 w-16 h-16 rounded-full bg-amber-800 opacity-5 blur-sm"></div>
                       <div className="absolute bottom-20 left-10 w-12 h-12 rounded-full bg-amber-900 opacity-5 blur-sm"></div>
                       
-                      {/* Letter Header */}
                       <div className="relative p-8 sm:p-12 border-b-2 border-amber-300/50">
                         <div className="text-center space-y-3">
-                          {/* Decorative Top Border */}
                           <div className="flex items-center justify-center gap-2 mb-4">
                             <div className="h-px w-16 bg-gradient-to-r from-transparent to-amber-600"></div>
                             <svg className="w-8 h-8 text-amber-700" fill="currentColor" viewBox="0 0 24 24">
@@ -1369,35 +1292,33 @@ export default function MemorialPage() {
                             In loving memory of {memorial?.name}
                           </p>
                           
-                          {/* Decorative Bottom Border */}
                           <div className="flex items-center justify-center gap-2 mt-4">
                             <div className="h-px w-24 bg-gradient-to-r from-transparent via-amber-400 to-transparent"></div>
                           </div>
                         </div>
                       </div>
 
-                      {/* Letter Body */}
                       <div className="relative p-8 sm:p-12 space-y-8">
                         <div className="space-y-6">
-                          {/* From Section */}
                           <div className="flex items-start gap-3 pb-4 border-b border-amber-300/30">
                             <span className="text-amber-800 font-serif text-lg italic">From:</span>
                             <span className="text-amber-950 font-semibold text-lg font-serif">{selectedTribute.name}</span>
                           </div>
                           
-                          {/* Message Content */}
                           <div className="space-y-4">
-                            <p className="text-amber-950 leading-relaxed font-serif text-base sm:text-lg whitespace-pre-line indent-8" style={{ 
+                            <p className="text-amber-950 leading-relaxed font-serif text-base sm:text-lg whitespace-pre-wrap break-words indent-8" style={{ 
                               fontFamily: 'Georgia, serif',
                               textAlign: 'justify',
-                              lineHeight: '1.8'
+                              lineHeight: '1.8',
+                              wordBreak: 'break-word',
+                              overflowWrap: 'break-word',
+                              hyphens: 'auto'
                             }}>
                               {selectedTribute.message}
                             </p>
                           </div>
                         </div>
 
-                        {/* Signature Line */}
                         <div className="pt-8 mt-8 border-t border-amber-300/30">
                           <div className="flex justify-between items-end">
                             <div className="text-amber-700 italic text-xs font-serif">
@@ -1416,7 +1337,6 @@ export default function MemorialPage() {
                           </div>
                         </div>
 
-                        {/* Decorative Corner Elements */}
                         <div className="absolute top-6 left-6 text-amber-400 opacity-30">
                           <svg className="w-12 h-12" fill="currentColor" viewBox="0 0 24 24">
                             <path d="M12 2C6.48 2 2 6.48 2 12s4.48 10 10 10 10-4.48 10-10S17.52 2 12 2zm0 18c-4.41 0-8-3.59-8-8s3.59-8 8-8 8 3.59 8 8-3.59 8-8 8z" opacity="0.3" />
@@ -1430,22 +1350,18 @@ export default function MemorialPage() {
                         </div>
                       </div>
 
-                      {/* Vintage Paper Edge Effect */}
                       <div className="absolute inset-0 pointer-events-none border-2 border-amber-900/10 rounded-xl"></div>
                       <div className="absolute inset-0 pointer-events-none" style={{
                         boxShadow: 'inset 0 0 60px rgba(139, 69, 19, 0.1), inset 0 0 20px rgba(160, 82, 45, 0.05)'
                       }}></div>
 
-                      {/* Wax Seal */}
                       <div className="absolute -bottom-8 left-1/2 transform -translate-x-1/2 z-30">
                         <div className="relative">
                           <div className="w-16 h-16 rounded-full bg-gradient-to-br from-red-800 via-red-900 to-red-950 shadow-2xl flex items-center justify-center border-4 border-red-950 relative">
                             <div className="absolute inset-0 rounded-full bg-gradient-to-br from-red-700/30 to-transparent"></div>
                             <span className="text-red-200 text-xl relative z-10">🕊️</span>
-                            {/* Wax texture */}
                             <div className="absolute inset-2 rounded-full border border-red-700/50"></div>
                           </div>
-                          {/* Wax drip effect */}
                           <div className="absolute -bottom-1 left-1/2 transform -translate-x-1/2 w-4 h-2 bg-red-950 rounded-b-full opacity-70"></div>
                         </div>
                       </div>
