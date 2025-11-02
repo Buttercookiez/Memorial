@@ -728,6 +728,47 @@ export default function Dashboard() {
                   placeholder="Optional"
                 />
               </div>
+              <div className="grid grid-cols-1 sm:grid-cols-2 gap-6">
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
+                    Birth Date *
+                  </label>
+                  <input
+                    type="date"
+                    name="birth_date"
+                    value={formData.birth_date}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-3 ${darkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-300 text-neutral-900'} border rounded-xl focus:ring-2 focus:ring-neutral-500 focus:border-transparent outline-none transition-all`}
+                  />
+                </div>
+
+                <div>
+                  <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
+                    Death Date *
+                  </label>
+                  <input
+                    type="date"
+                    name="death_date"
+                    value={formData.death_date}
+                    onChange={handleInputChange}
+                    className={`w-full px-4 py-3 ${darkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-300 text-neutral-900'} border rounded-xl focus:ring-2 focus:ring-neutral-500 focus:border-transparent outline-none transition-all`}
+                  />
+                </div>
+              </div>
+
+              <div>
+                <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
+                  Cause of Death
+                </label>
+                <input
+                  type="text"
+                  name="cause_of_death"
+                  value={formData.cause_of_death}
+                  onChange={handleInputChange}
+                  className={`w-full px-4 py-3 ${darkMode ? 'bg-neutral-800 border-neutral-700 text-white' : 'bg-white border-neutral-300 text-neutral-900'} border rounded-xl focus:ring-2 focus:ring-neutral-500 focus:border-transparent outline-none transition-all`}
+                  placeholder="Optional"
+                />
+              </div>
 
               <div>
                 <label className={`block text-sm font-medium ${darkMode ? 'text-neutral-300' : 'text-neutral-700'} mb-2`}>
